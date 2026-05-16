@@ -30,11 +30,11 @@ export default async function seoRoutes(fastify: FastifyInstance) {
       { url: '/lancamentos', priority: 1.0, changefreq: 'daily' },
       { url: '/guia', priority: 0.8, changefreq: 'weekly' },
       { url: '/simulador/financiamento', priority: 0.7, changefreq: 'monthly' },
-      ...cidades.map(c => ({ url: `/cidades/${c.slug}`, priority: 1.0, changefreq: 'monthly', lastmod: c.updatedAt })),
-      ...bairros.map(b => ({ url: `/bairros/${b.slug}`, priority: 0.9, changefreq: 'monthly', lastmod: b.updatedAt })),
-      ...imoveis.map(i => ({ url: `/imoveis/${i.slug}`, priority: 0.8, changefreq: 'weekly', lastmod: i.updatedAt })),
-      ...empreendimentos.map(e => ({ url: `/lancamentos/${e.slug}`, priority: 0.8, changefreq: 'weekly', lastmod: e.updatedAt })),
-      ...artigos.map(a => ({
+      ...cidades.map((c: { slug: string; updatedAt: Date }) => ({ url: `/cidades/${c.slug}`, priority: 1.0, changefreq: 'monthly', lastmod: c.updatedAt })),
+      ...bairros.map((b: { slug: string; updatedAt: Date }) => ({ url: `/bairros/${b.slug}`, priority: 0.9, changefreq: 'monthly', lastmod: b.updatedAt })),
+      ...imoveis.map((i: { slug: string; updatedAt: Date }) => ({ url: `/imoveis/${i.slug}`, priority: 0.8, changefreq: 'weekly', lastmod: i.updatedAt })),
+      ...empreendimentos.map((e: { slug: string; updatedAt: Date }) => ({ url: `/lancamentos/${e.slug}`, priority: 0.8, changefreq: 'weekly', lastmod: e.updatedAt })),
+      ...artigos.map((a: { slug: string; categoria: string; updatedAt: Date }) => ({
         url: `/guia/${a.categoria.toLowerCase()}/${a.slug}`,
         priority: 0.7,
         changefreq: 'weekly',

@@ -59,7 +59,7 @@ export default async function bairrosRoutes(fastify: FastifyInstance) {
       }),
     ])
 
-    const distribuicaoPorTipo = Object.fromEntries(distribuicao.map(d => [d.tipo, d._count]))
+    const distribuicaoPorTipo = Object.fromEntries(distribuicao.map((d: { tipo: string; _count: number }) => [d.tipo, d._count]))
 
     return reply.send({
       data: bairro,
@@ -138,7 +138,7 @@ export default async function bairrosRoutes(fastify: FastifyInstance) {
       data: {
         ...bairro,
         totalImoveis,
-        distribuicaoPorTipo: distribuicao.map(d => ({
+        distribuicaoPorTipo: distribuicao.map((d: { tipo: string; _count: number; _avg: { preco: unknown } }) => ({
           tipo: d.tipo,
           count: d._count,
           precoMedio: d._avg.preco,

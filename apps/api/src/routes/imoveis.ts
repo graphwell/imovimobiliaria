@@ -1,8 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { imovelFiltrosSchema, createImovelSchema } from '../schemas/imovel.schema.js'
+import { imovelFiltrosSchema } from '../schemas/imovel.schema.js'
 import { parsePagination, buildPaginatedResponse } from '../utils/pagination.js'
-import { slugify } from '../utils/slug.js'
 
 export default async function imoveisRoutes(fastify: FastifyInstance) {
   // GET /imoveis — listagem com filtros

@@ -41,7 +41,7 @@ export default async function adminDashboardRoutes(fastify: FastifyInstance) {
     ])
 
     const totalLeads = await fastify.prisma.lead.count()
-    const qualificados = leadsPorStatus.find(l => l.statusCrm === 'QUALIFICADO')?._count ?? 0
+    const qualificados = leadsPorStatus.find((l: { statusCrm: string; _count: number }) => l.statusCrm === 'QUALIFICADO')?._count ?? 0
     const taxaQualificacao = totalLeads > 0 ? Math.round((qualificados / totalLeads) * 100) : 0
 
     return reply.send({
@@ -51,8 +51,8 @@ export default async function adminDashboardRoutes(fastify: FastifyInstance) {
         leadsHoje,
         leadsSemana,
         taxaQualificacao,
-        leadsPorOrigem: leadsPorOrigem.map(l => ({ origem: l.origem, count: l._count })),
-        leadsPorStatus: leadsPorStatus.map(l => ({ status: l.statusCrm, count: l._count })),
+        leadsPorOrigem: leadsPorOrigem.map((l: { origem: string; _count: number }) => ({ origem: l.origem, count: l._count })),
+        leadsPorStatus: leadsPorStatus.map((l: { statusCrm: string; _count: number }) => ({ status: l.statusCrm, count: l._count })),
         ultimosLeads,
       },
     })

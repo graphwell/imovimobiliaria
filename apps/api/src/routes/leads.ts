@@ -1,8 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import { z } from 'zod'
-import { createLeadSchema, updateLeadStatusSchema, updateLeadObservacoesSchema } from '../schemas/lead.schema.js'
+import { createLeadSchema } from '../schemas/lead.schema.js'
 import { calcularScoreLead } from '../services/leadScoringService.js'
-import { parsePagination, buildPaginatedResponse } from '../utils/pagination.js'
 
 export default async function leadsRoutes(fastify: FastifyInstance) {
   // POST /leads — público

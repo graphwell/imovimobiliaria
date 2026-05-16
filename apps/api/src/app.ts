@@ -1,3 +1,4 @@
+import type { FastifyRequest, FastifyReply } from 'fastify'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
@@ -17,7 +18,6 @@ export async function buildApp() {
     },
   })
 
-  // Plugins globais
   await app.register(cors, {
     origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:3000',
     credentials: true,
@@ -31,10 +31,8 @@ export async function buildApp() {
     timeWindow: '1 minute',
   })
 
-  // Decorators
   app.decorate('prisma', prisma)
 
-  // Error handler global
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error)
     const statusCode = error.statusCode ?? 500
@@ -45,7 +43,6 @@ export async function buildApp() {
     })
   })
 
-  // Rotas
   await app.register(import('./routes/imoveis.js'), { prefix: '/imoveis' })
   await app.register(import('./routes/bairros.js'), { prefix: '/bairros' })
   await app.register(import('./routes/leads.js'), { prefix: '/leads' })
@@ -66,5 +63,3 @@ declare module 'fastify' {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
   }
 }
-
-import type { FastifyRequest, FastifyReply } from 'fastify'

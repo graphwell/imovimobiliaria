@@ -1,7 +1,6 @@
-import type { FastifyInstance } from 'fastify'
-import fp from 'fastify-plugin'
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 
-async function authPlugin(fastify: FastifyInstance) {
+export default async function authPlugin(fastify: FastifyInstance) {
   await fastify.register(import('@fastify/jwt'), {
     secret: process.env['JWT_SECRET'] ?? 'imov_dev_secret_change_in_production',
     cookie: {
@@ -10,7 +9,7 @@ async function authPlugin(fastify: FastifyInstance) {
     },
   })
 
-  fastify.decorate('authenticate', async function (request: Parameters<typeof fastify.authenticate>[0], reply: Parameters<typeof fastify.authenticate>[1]) {
+  fastify.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
     try {
       await request.jwtVerify()
     } catch {
@@ -18,5 +17,3 @@ async function authPlugin(fastify: FastifyInstance) {
     }
   })
 }
-
-export default fp(authPlugin)
