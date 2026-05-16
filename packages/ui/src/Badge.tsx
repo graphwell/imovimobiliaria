@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react'
 import { cn } from './utils'
 
 type BadgeVariant = 'oportunidade' | 'destaque' | 'novo' | 'financiamento' | 'alto-padrao' | 'mcmv' | 'fgts' | 'lancamento'
 
 interface BadgeProps {
   variant: BadgeVariant
-  children: React.ReactNode
+  children: ReactNode
   className?: string
 }
 

@@ -1,11 +1,11 @@
+import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
 import { cn } from './utils'
-import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   hint?: string
   error?: string
-  icon?: React.ReactNode
+  icon?: ReactNode
 }
 
 export function Input({ label, hint, error, icon, className, id, ...props }: InputProps) {
