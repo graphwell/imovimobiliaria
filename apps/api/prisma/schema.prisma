@@ -1,0 +1,327 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoImovel {
+  APARTAMENTO
+  CASA
+  TERRENO
+  COBERTURA
+  COMERCIAL
+  KITNET
+}
+
+enum ModalidadeImovel {
+  VENDA
+  LOCACAO
+  LANCAMENTO
+}
+
+enum StatusImovel {
+  DISPONIVEL
+  VENDIDO
+  ALUGADO
+  RESERVADO
+  INATIVO
+}
+
+enum PerfilBairro {
+  POPULAR
+  MEDIO
+  ALTO_PADRAO
+  LUXO
+}
+
+enum StatusEmpreendimento {
+  LANCAMENTO
+  EM_OBRAS
+  PRONTO
+  ENTREGUE
+}
+
+enum OrigemLead {
+  FORMULARIO_IMOVEL
+  FORMULARIO_BAIRRO
+  WHATSAPP
+  IA_CHAT
+  SIMULADOR
+  LANDING_PAGE
+  ORGANICO
+}
+
+enum InteresseTipo {
+  COMPRA
+  LOCACAO
+  INVESTIMENTO
+  LANCAMENTO
+  FINANCIAMENTO
+}
+
+enum StatusCrm {
+  NOVO
+  CONTATADO
+  QUALIFICADO
+  PROPOSTA
+  CONVERTIDO
+  PERDIDO
+}
+
+enum CategoriaArtigo {
+  FINANCIAMENTO
+  CONSORCIO
+  DOCUMENTACAO
+  MCMV
+  INVESTIMENTO
+  MERCADO
+  DICAS
+}
+
+enum UserRole {
+  ADMIN
+  CORRETOR
+  EDITOR
+}
+
+model Cidade {
+  id        String   @id @default(uuid())
+  nome      String
+  slug      String   @unique
+  estado    String   @default("CE")
+  regiao    String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bairros         Bairro[]
+  imoveis         Imovel[]
+  empreendimentos Empreendimento[]
+  leads           Lead[]
+
+  @@index([slug])
+  @@map("cidades")
+}
+
+model Bairro {
+  id                    String       @id @default(uuid())
+  nome                  String
+  slug                  String       @unique
+  cidadeId              String
+  regiao                String?
+  descricaoSeo          String       @default("")
+  infraestrutura        Json         @default("{}")
+  precoM2MedioVenda     Decimal?     @db.Decimal(10, 2)
+  precoM2MedioLocacao   Decimal?     @db.Decimal(10, 2)
+  valorizacao12meses    Decimal?     @db.Decimal(5, 2)
+  perfil                PerfilBairro @default(MEDIO)
+  pontuacaoInfraestrutura Int?
+  metaTitle             String?
+  metaDescription       String?
+  imagemDestaqueUrl     String?
+  ativo                 Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  cidade          Cidade           @relation(fields: [cidadeId], references: [id])
+  imoveis         Imovel[]
+  empreendimentos Empreendimento[]
+  leads           Lead[]
+
+  @@index([slug])
+  @@index([cidadeId])
+  @@map("bairros")
+}
+
+model Empreendimento {
+  id                   String               @id @default(uuid())
+  slug                 String               @unique
+  nome                 String
+  construtoraNome      String
+  constutoraSlug       String
+  descricao            String               @default("")
+  descricaoCompleta    String               @default("")
+  status               StatusEmpreendimento @default(LANCAMENTO)
+  previsaoEntrega      String?
+  estagioDaObra        Int?
+  bairroId             String
+  cidadeId             String
+  endereco             String               @default("")
+  latitude             Decimal?             @db.Decimal(10, 8)
+  longitude            Decimal?             @db.Decimal(11, 8)
+  tipoUnidades         TipoImovel[]
+  areaMinima           Decimal?             @db.Decimal(10, 2)
+  areaMaxima           Decimal?             @db.Decimal(10, 2)
+  precoMinimo          Decimal?             @db.Decimal(12, 2)
+  precoMaximo          Decimal?             @db.Decimal(12, 2)
+  quartosPossiveis     Int[]
+  diferenciais         String[]
+  aceitaFgts           Boolean              @default(false)
+  aceitaFinanciamento  Boolean              @default(true)
+  elegivelMcmv         Boolean              @default(false)
+  fotos                Json                 @default("{}")
+  arquivosPdf          Json                 @default("{}")
+  videoApresentacaoUrl String?
+  metaTitle            String?
+  metaDescription      String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  bairro  Bairro   @relation(fields: [bairroId], references: [id])
+  cidade  Cidade   @relation(fields: [cidadeId], references: [id])
+  imoveis Imovel[]
+  leads   Lead[]
+
+  @@index([slug])
+  @@index([cidadeId])
+  @@index([bairroId])
+  @@index([constutoraSlug])
+  @@map("empreendimentos")
+}
+
+model Imovel {
+  id                  String           @id @default(uuid())
+  slug                String           @unique
+  titulo              String
+  descricao           String           @default("")
+  tipo                TipoImovel
+  modalidade          ModalidadeImovel @default(VENDA)
+  status              StatusImovel     @default(DISPONIVEL)
+  preco               Decimal          @db.Decimal(12, 2)
+  precoCondominio     Decimal?         @db.Decimal(10, 2)
+  precoIptu           Decimal?         @db.Decimal(10, 2)
+  areaTotal           Decimal          @db.Decimal(10, 2)
+  areaPrivativa       Decimal?         @db.Decimal(10, 2)
+  quartos             Int              @default(0)
+  suites              Int              @default(0)
+  banheiros           Int              @default(1)
+  vagas               Int              @default(0)
+  andarPavimento      Int?
+  totalAndares        Int?
+  anoConstrucao       Int?
+  aceitaFinanciamento Boolean          @default(true)
+  aceitaFgts          Boolean          @default(false)
+  aceitaConsorcio     Boolean          @default(false)
+  elegivelMcmv        Boolean          @default(false)
+  novo                Boolean          @default(false)
+  destaque            Boolean          @default(false)
+  oportunidade        Boolean          @default(false)
+  rankingScore        Decimal?         @db.Decimal(5, 2)
+  endereco            String
+  numero              String           @default("S/N")
+  complemento         String?
+  cep                 String           @default("")
+  bairroId            String
+  cidadeId            String
+  empreendimentoId    String?
+  latitude            Decimal?         @db.Decimal(10, 8)
+  longitude           Decimal?         @db.Decimal(11, 8)
+  construtoraNome     String?
+  diferenciais        String[]
+  fotos               Json             @default("[]")
+  videoUrl            String?
+  tourVirtualUrl      String?
+  metaTitle           String?
+  metaDescription     String?
+  fonteImportacao     String?
+  publicadoAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  bairro         Bairro          @relation(fields: [bairroId], references: [id])
+  cidade         Cidade          @relation(fields: [cidadeId], references: [id])
+  empreendimento Empreendimento? @relation(fields: [empreendimentoId], references: [id])
+  leads          Lead[]
+
+  @@index([slug])
+  @@index([bairroId])
+  @@index([cidadeId])
+  @@index([status])
+  @@index([tipo])
+  @@index([modalidade])
+  @@index([rankingScore])
+  @@index([destaque])
+  @@index([publicadoAt])
+  @@map("imoveis")
+}
+
+model Lead {
+  id                 String        @id @default(uuid())
+  nome               String
+  telefone           String
+  email              String?
+  origem             OrigemLead
+  interesseTipo      InteresseTipo
+  imovelId           String?
+  empreendimentoId   String?
+  bairroInteresseId  String?
+  cidadeId           String?
+  faixaPrecoMin      Decimal?      @db.Decimal(12, 2)
+  faixaPrecoMax      Decimal?      @db.Decimal(12, 2)
+  quartosDesejados   Int?
+  score              Int           @default(0)
+  statusCrm          StatusCrm     @default(NOVO)
+  observacoes        String?
+  comportamentoJson  Json?
+  utmSource          String?
+  utmMedium          String?
+  utmCampaign        String?
+  utmContent         String?
+  ip                 String?
+  userAgent          String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  contatadoAt        DateTime?
+
+  imovel           Imovel?          @relation(fields: [imovelId], references: [id])
+  empreendimento   Empreendimento?  @relation(fields: [empreendimentoId], references: [id])
+  bairroInteresse  Bairro?          @relation(fields: [bairroInteresseId], references: [id])
+  cidade           Cidade?          @relation(fields: [cidadeId], references: [id])
+
+  @@index([createdAt])
+  @@index([statusCrm])
+  @@index([origem])
+  @@index([score])
+  @@map("leads")
+}
+
+model Artigo {
+  id                   String          @id @default(uuid())
+  slug                 String          @unique
+  titulo               String
+  subtitulo            String?
+  conteudo             String          @default("")
+  categoria            CategoriaArtigo
+  tags                 String[]
+  autorNome            String          @default("Equipe IMOV")
+  imagemCapaUrl        String?
+  tempoLeituraMinutos  Int?
+  publicado            Boolean         @default(false)
+  publicadoAt          DateTime?
+  metaTitle            String?
+  metaDescription      String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([slug])
+  @@index([categoria])
+  @@index([publicado])
+  @@map("artigos")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  nome       String
+  email      String   @unique
+  senhaHash  String
+  role       UserRole @default(CORRETOR)
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}

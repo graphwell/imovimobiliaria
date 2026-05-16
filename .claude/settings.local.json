@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell(pnpm *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Get-ChildItem \"C:\\\\SOMAR\\\\imov_imobiliaria\\\\apps\\\\api\\\\src\\\\routes\" -ErrorAction SilentlyContinue; if \\(-not \\(Test-Path \"C:\\\\SOMAR\\\\imov_imobiliaria\\\\apps\\\\api\\\\src\\\\routes\"\\)\\) { Write-Output \"Routes directory does not exist\" } else { Write-Output \"Routes directory exists\" })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\SOMAR\\\\imov_imobiliaria\\\\apps\\\\api\\\\src\\\\routes\" -Recurse | Where-Object { $_.Extension -eq \".ts\" } | ForEach-Object { \"$\\($_.FullName\\) [$\\($_.Length\\) bytes]\" })",
+      "PowerShell(docker info *)"
+    ]
+  }
+}

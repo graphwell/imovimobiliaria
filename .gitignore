@@ -1,0 +1,38 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+dist
+build
+.turbo
+
+# Environment (nunca commitar .env com segredos reais)
+.env
+**/.env
+.env.local
+**/.env.local
+.env.production
+**/.env.production
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Prisma
+prisma/migrations/dev.db

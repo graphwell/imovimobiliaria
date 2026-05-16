@@ -1,0 +1,29 @@
+import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+import { createLeadSchema, updateLeadStatusSchema, updateLeadObservacoesSchema } from '../schemas/lead.schema.js'
+import { calcularScoreLead } from '../services/leadScoringService.js'
+import { parsePagination, buildPaginatedResponse } from '../utils/pagination.js'
+
+export default async function leadsRoutes(fastify: FastifyInstance) {
+  // POST /leads — público
+  fastify.post('/', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
+    const body = createLeadSchema.parse(request.body)
+    const score = calcularScoreLead(body)
+
+    const lead = await fastify.prisma.lead.create({
+      data: {
+        ...body,
+        score,
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+        faixaPrecoMin: body.faixaPrecoMin,
+        faixaPrecoMax: body.faixaPrecoMax,
+        comportamentoJson: body.comportamentoJson as Record<string, unknown> | undefined,
+      },
+    })
+
+    return reply.code(201).send({ success: true, data: { id: lead.id, score: lead.score } })
+  })
+}
