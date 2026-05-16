@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import type { Prisma } from '@prisma/client'
 import { createLeadSchema } from '../schemas/lead.schema.js'
 import { calcularScoreLead } from '../services/leadScoringService.js'
 
@@ -18,7 +19,9 @@ export default async function leadsRoutes(fastify: FastifyInstance) {
         userAgent: request.headers['user-agent'],
         faixaPrecoMin: body.faixaPrecoMin,
         faixaPrecoMax: body.faixaPrecoMax,
-        comportamentoJson: body.comportamentoJson as Record<string, unknown> | undefined,
+        comportamentoJson: body.comportamentoJson !== undefined
+          ? (body.comportamentoJson as unknown as Prisma.InputJsonValue)
+          : undefined,
       },
     })
 
