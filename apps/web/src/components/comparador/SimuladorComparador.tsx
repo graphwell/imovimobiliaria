@@ -384,8 +384,6 @@ function EtapaPlano({ perfil, fin, est, onNext, onBack }: {
   onNext: () => void
   onBack: () => void
 }) {
-  const economia = fin.totalPago - (est.parcela * (200 - Math.round((est.lanceEmbutido / est.parcela))))
-
   return (
     <div>
       <h2 className="text-xl font-bold text-neutral-900 mb-1">Seu plano estratégico personalizado</h2>
