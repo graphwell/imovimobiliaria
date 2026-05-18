@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import { SearchBar } from '../components/SearchBar'
 import { IntentCards } from '../components/home/IntentCards'
 import { WhatsAppCTA } from '../components/home/WhatsAppCTA'
@@ -28,15 +27,13 @@ export default function HomePage() {
     <main>
 
       {/* ─── HERO ─── */}
+      {/* Para usar foto real: coloque a imagem em apps/web/public/hero.jpg e troque o fundo abaixo */}
       <section className="relative min-h-[700px] flex items-center overflow-hidden">
-        <Image
-          src="https://images.unsplash.com/photo-1590577976322-3d2d6a2130a5?auto=format&fit=crop&w=1920&q=80"
-          alt="Vista aérea de Fortaleza"
-          fill
-          className="object-cover"
-          priority
+        <div className="absolute inset-0 bg-[#0a1628]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d2545] to-[#0a1628]" />
+        <div className="absolute inset-0 opacity-30"
+          style={{ backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% 0%, #1B4FD8 0%, transparent 70%)' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/80 via-neutral-900/70 to-neutral-900/85" />
 
         <div className="relative z-10 container-imov py-20 w-full">
           <div className="text-center text-white max-w-3xl mx-auto">
