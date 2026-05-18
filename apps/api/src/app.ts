@@ -3,6 +3,7 @@ import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
 import rateLimit from '@fastify/rate-limit'
 import { PrismaClient } from '@prisma/client'
+import authPlugin from './plugins/auth.js'
 
 const prisma = new PrismaClient()
 
@@ -32,6 +33,8 @@ export async function buildApp() {
   })
 
   app.decorate('prisma', prisma)
+
+  await app.register(authPlugin)
 
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error)
