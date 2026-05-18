@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 
 const SIMULADORES = [
@@ -15,6 +15,16 @@ export function Header() {
   const pathname = usePathname()
   const [dropOpen, setDropOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function openDrop() {
+    if (closeTimer.current) clearTimeout(closeTimer.current)
+    setDropOpen(true)
+  }
+
+  function closeDrop() {
+    closeTimer.current = setTimeout(() => setDropOpen(false), 150)
+  }
 
   const isAdmin = pathname.startsWith('/admin')
   if (isAdmin) return null
@@ -34,7 +44,7 @@ export function Header() {
           <Link href="/imoveis?oportunidade=true" className="hover:text-brand-500 transition-colors">Oportunidades</Link>
 
           {/* Dropdown Simuladores */}
-          <div className="relative" onMouseEnter={() => setDropOpen(true)} onMouseLeave={() => setDropOpen(false)}>
+          <div className="relative" onMouseEnter={openDrop} onMouseLeave={closeDrop}>
             <button className={`flex items-center gap-1 hover:text-brand-500 transition-colors ${dropOpen ? 'text-brand-500' : ''}`}>
               Simuladores
               <svg className={`w-3.5 h-3.5 transition-transform ${dropOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
