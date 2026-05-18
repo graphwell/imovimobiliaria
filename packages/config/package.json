@@ -2,9 +2,13 @@
   "name": "@imov/config",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "exports": {
     "./eslint": "./eslint.js",
     "./tailwind": "./tailwind.config.ts",
     "./typescript": "./tsconfig.base.json"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.15"
   }
 }
