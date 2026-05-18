@@ -11,7 +11,11 @@ const FILTROS_RAPIDOS = [
   { label: 'MCMV', param: 'elegivelMcmv', valor: 'true' },
 ]
 
-export function SearchBar() {
+interface SearchBarProps {
+  compact?: boolean
+}
+
+export function SearchBar({ compact = false }: SearchBarProps) {
   const router = useRouter()
   const [query, setQuery] = useState('')
 
@@ -24,6 +28,26 @@ export function SearchBar() {
 
   function handleFiltro(param: string, valor: string) {
     router.push(`/imoveis?${param}=${valor}`)
+  }
+
+  if (compact) {
+    return (
+      <form onSubmit={handleSubmit} className="flex gap-2 bg-white/15 border border-white/20 rounded-xl p-1.5 backdrop-blur-sm">
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar por bairro, tipo ou código..."
+          className="flex-1 px-3 py-2 text-white placeholder-white/50 text-sm outline-none bg-transparent"
+        />
+        <button
+          type="submit"
+          className="px-4 py-2 bg-white/20 text-white text-sm font-medium rounded-lg hover:bg-white/30 transition-colors shrink-0"
+        >
+          Buscar
+        </button>
+      </form>
+    )
   }
 
   return (
