@@ -20,6 +20,7 @@ export function Header() {
           <Link href="/imoveis" className="hover:text-brand-500 transition-colors">Imóveis</Link>
           <Link href="/lancamentos" className="hover:text-brand-500 transition-colors">Lançamentos</Link>
           <Link href="/imoveis?oportunidade=true" className="hover:text-brand-500 transition-colors">Oportunidades</Link>
+          <Link href="/comparador/consorcio-vs-financiamento" className="hover:text-brand-500 transition-colors">Consórcio</Link>
         </nav>
 
         <div className="flex items-center gap-3">
