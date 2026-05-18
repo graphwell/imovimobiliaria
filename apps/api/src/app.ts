@@ -1,9 +1,9 @@
-import Fastify from 'fastify'
+import Fastify, { type FastifyRequest, type FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
 import rateLimit from '@fastify/rate-limit'
+import jwt from '@fastify/jwt'
 import { PrismaClient } from '@prisma/client'
-import authPlugin from './plugins/auth.js'
 
 const prisma = new PrismaClient()
 
@@ -32,9 +32,24 @@ export async function buildApp() {
     timeWindow: '1 minute',
   })
 
+  // JWT registrado na raiz — disponível para todas as rotas
+  await app.register(jwt, {
+    secret: process.env['JWT_SECRET'] ?? 'imov_dev_secret_change_in_production',
+    cookie: {
+      cookieName: 'imov_token',
+      signed: false,
+    },
+  })
+
   app.decorate('prisma', prisma)
 
-  await app.register(authPlugin)
+  app.decorate('authenticate', async function (request: FastifyRequest, reply: FastifyReply) {
+    try {
+      await request.jwtVerify()
+    } catch {
+      reply.code(401).send({ statusCode: 401, error: 'Unauthorized', message: 'Token inválido ou expirado' })
+    }
+  })
 
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error)
