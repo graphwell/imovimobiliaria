@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Metadata } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
+import { Header } from '../components/Header'
 import './globals.css'
 
 const inter = Inter({
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             />
           </noscript>
         )}
+        <Header />
         {children}
       </body>
     </html>
