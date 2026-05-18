@@ -32,7 +32,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   fastify.get('/me', async (request, reply) => {
     try {
-      await request.jwtVerify({ onlyCookie: true })
+      await request.jwtVerify()
       const payload = request.user as { sub: string }
       const user = await fastify.prisma.user.findUnique({
         where: { id: payload.sub },
