@@ -1,5 +1,4 @@
 import { cn, formatCurrency } from './utils'
-import { Badge } from './Badge'
 import type { BairroListItem } from '@imov/types'
 
 interface CardBairroProps {
