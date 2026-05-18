@@ -27,7 +27,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       maxAge: 7 * 24 * 60 * 60,
     })
 
-    return reply.send({ success: true, data: { id: user.id, nome: user.nome, email: user.email, role: user.role } })
+    return reply.send({ success: true, token, data: { id: user.id, nome: user.nome, email: user.email, role: user.role } })
   })
 
   fastify.get('/me', async (request, reply) => {

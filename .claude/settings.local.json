@@ -6,7 +6,21 @@
       "PowerShell(New-Item *)",
       "PowerShell(Get-ChildItem \"C:\\\\SOMAR\\\\imov_imobiliaria\\\\apps\\\\api\\\\src\\\\routes\" -ErrorAction SilentlyContinue; if \\(-not \\(Test-Path \"C:\\\\SOMAR\\\\imov_imobiliaria\\\\apps\\\\api\\\\src\\\\routes\"\\)\\) { Write-Output \"Routes directory does not exist\" } else { Write-Output \"Routes directory exists\" })",
       "PowerShell(Get-ChildItem -Path \"C:\\\\SOMAR\\\\imov_imobiliaria\\\\apps\\\\api\\\\src\\\\routes\" -Recurse | Where-Object { $_.Extension -eq \".ts\" } | ForEach-Object { \"$\\($_.FullName\\) [$\\($_.Length\\) bytes]\" })",
-      "PowerShell(docker info *)"
+      "PowerShell(docker info *)",
+      "Bash(pnpm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)",
+      "Bash(git push *)",
+      "Bash(ssh *)",
+      "Bash(nslookup *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://imov.somar.ia.br)",
+      "Bash(curl -s https://imov.somar.ia.br)",
+      "Bash(curl -sk -o /dev/null -w \"%{http_code}\\\\n\" https://imov.somar.ia.br)",
+      "Bash(curl -sk https://imov.somar.ia.br)",
+      "Bash(git commit -m 'fix: remove unused Badge import in CardBairro *)",
+      "Bash(git commit -m 'feat: add header with logo and navigation *)",
+      "Bash(git commit *)"
     ]
   }
 }
