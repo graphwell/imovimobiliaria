@@ -13,4 +13,5 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   await fastify.register(import('./imoveis.js'))
   await fastify.register(import('./leads.js'))
   await fastify.register(import('./dashboard.js'))
+  await fastify.register(import('./integracoes.js'))
 }
