@@ -84,6 +84,38 @@ export const adminApi = {
     status: () => request<{ data: { sheets: { ok: boolean; spreadsheetId?: string; url?: string; error?: string }; gmail: { ok: boolean; error?: string }; analytics: { ok: boolean; error?: string } } }>('/admin/integracoes/status'),
     sheetsLinhas: () => request<{ data: string[][] }>('/admin/integracoes/sheets/linhas'),
   },
+
+  google: {
+    authUrl: () => request<{ url: string }>('/admin/google/auth-url'),
+    status: () => request<{ data: { connected: boolean; email?: string; expiresAt?: string; scopes?: string[]; expired?: boolean } }>('/admin/google/status'),
+    disconnect: () => request('/admin/google/disconnect', { method: 'DELETE' }),
+
+    businessAccounts: () => request<{ data: { name: string; accountName: string; type: string }[] }>('/admin/google/business/accounts'),
+    businessLocations: (accountName: string) =>
+      request<{ data: { name: string; title: string }[] }>(`/admin/google/business/locations?accountName=${encodeURIComponent(accountName)}`),
+    businessPost: (locationName: string, summary: string, callToActionType?: string) =>
+      request('/admin/google/business/post', {
+        method: 'POST',
+        body: JSON.stringify({ locationName, summary, callToActionType, callToActionUrl: window.location.origin }),
+      }),
+    businessReviews: (locationName: string) =>
+      request<{ data: unknown[] }>(`/admin/google/business/reviews?locationName=${encodeURIComponent(locationName)}`),
+    reviewReply: (locationName: string, reviewId: string, reply: string) =>
+      request('/admin/google/business/reviews/reply', {
+        method: 'POST',
+        body: JSON.stringify({ locationName, reviewId, reply }),
+      }),
+
+    sitemaps: () => request<{ data: unknown[] }>('/admin/google/search-console/sitemaps'),
+    submitSitemap: () => request('/admin/google/search-console/submit-sitemap', { method: 'POST' }),
+    searchAnalytics: (startDate?: string, endDate?: string) => {
+      const q = new URLSearchParams()
+      if (startDate) q.set('startDate', startDate)
+      if (endDate) q.set('endDate', endDate)
+      const qs = q.toString() ? `?${q.toString()}` : ''
+      return request<{ data: { totals: { clicks: number; impressions: number; ctr: number; position: number }; topQueries: { query: string; clicks: number; impressions: number; position: number }[] } }>(`/admin/google/search-console/analytics${qs}`)
+    },
+  },
 }
 
 export interface DashboardMetricas {
