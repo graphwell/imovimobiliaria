@@ -68,6 +68,7 @@ export async function buildApp() {
   await app.register(import('./routes/empreendimentos.js'), { prefix: '/empreendimentos' })
   await app.register(import('./routes/auth.js'), { prefix: '/auth' })
   await app.register(import('./routes/seo.js'), { prefix: '/seo' })
+  await app.register(import('./routes/google-callback.js'), { prefix: '/google' })
   await app.register(import('./routes/admin/index.js'), { prefix: '/admin' })
 
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

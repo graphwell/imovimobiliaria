@@ -6,8 +6,6 @@ import * as searchConsole from '../../services/searchConsoleService.js'
 import { submitSitemap as submitSitemapJob } from '../../jobs/sitemapSubmit.js'
 import { syncImovelToGBP } from '../../jobs/googleBusinessSync.js'
 
-const FRONTEND_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://imov.somar.ia.br'
-
 export default async function googleOAuthRoutes(fastify: FastifyInstance) {
   // GET /admin/google/auth-url
   fastify.get('/google/auth-url', async (_req, reply) => {
@@ -15,18 +13,6 @@ export default async function googleOAuthRoutes(fastify: FastifyInstance) {
       return reply.code(500).send({ error: 'GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET não configurados' })
     }
     return reply.send({ url: oauth.getAuthUrl() })
-  })
-
-  // GET /admin/google/callback?code=XXX
-  fastify.get('/google/callback', async (request, reply) => {
-    const { code } = z.object({ code: z.string(), state: z.string().optional() }).parse(request.query)
-    try {
-      await oauth.handleCallback(code, fastify.prisma)
-      return reply.redirect(`${FRONTEND_URL}/admin/integracoes?connected=true`)
-    } catch (err) {
-      fastify.log.error({ err }, 'OAuth callback error')
-      return reply.redirect(`${FRONTEND_URL}/admin/integracoes?error=oauth_failed`)
-    }
   })
 
   // GET /admin/google/status
