@@ -36,3 +36,6 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/dev.db
+
+# Google service account credentials (nunca commitar)
+apps/api/secrets/
