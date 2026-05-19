@@ -38,10 +38,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const gtmId = process.env['NEXT_PUBLIC_GTM_ID']
+  const ga4Id = process.env['NEXT_PUBLIC_GA4_ID']
 
   return (
     <html lang="pt-BR" className={`${inter.variable} ${plusJakarta.variable}`}>
       <head>
+        {/* Google Analytics 4 */}
+        {ga4Id && (
+          <>
+            <script async src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${ga4Id}');`,
+              }}
+            />
+          </>
+        )}
+        {/* Google Tag Manager */}
         {gtmId && (
           <script
             dangerouslySetInnerHTML={{
