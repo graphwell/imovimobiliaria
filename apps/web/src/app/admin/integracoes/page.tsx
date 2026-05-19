@@ -1,8 +1,20 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { adminApi } from '../../../lib/admin-api'
+
+// useSearchParams precisa de Suspense — isolado neste componente filho
+function SearchParamsHandler({ onAlert }: { onAlert: (msg: string | null) => void }) {
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('connected') === 'true') onAlert('✅ Google conectado com sucesso!')
+    else if (searchParams.get('error')) onAlert('❌ Falha ao conectar. Tente novamente.')
+    else onAlert(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return null
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,18 +395,13 @@ function ServiceAccountCards({ status, linhas, onTestSheets, onTestGmail, testin
 type Tab = 'oauth' | 'servicos'
 
 export default function IntegracoesPage() {
-  const searchParams = useSearchParams()
   const [tab, setTab] = useState<Tab>('oauth')
+  const [alert, setAlert] = useState<string | null>(null)
   const [oauthStatus, setOauthStatus] = useState<OAuthStatus | null>(null)
   const [serviceStatus, setServiceStatus] = useState<AllStatus | null>(null)
   const [sheetsLinhas, setSheetsLinhas] = useState<string[][]>([])
   const [connecting, setConnecting] = useState(false)
   const [testing, setTesting] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    if (searchParams.get('connected') === 'true') setTab('oauth')
-    if (searchParams.get('error')) setTab('oauth')
-  }, [searchParams])
 
   const loadOAuth = useCallback(async () => {
     try { const r = await adminApi.google.status(); setOauthStatus(r.data) } catch {}
@@ -427,14 +434,14 @@ export default function IntegracoesPage() {
   }
 
   const connectedToOAuth = oauthStatus?.connected ?? false
-  const connectionAlert = searchParams.get('connected') === 'true'
-    ? '✅ Google conectado com sucesso!'
-    : searchParams.get('error')
-    ? '❌ Falha ao conectar. Tente novamente.'
-    : null
 
   return (
     <div className="max-w-5xl mx-auto">
+      {/* Lê query params sem bloquear o build estático */}
+      <Suspense fallback={null}>
+        <SearchParamsHandler onAlert={setAlert} />
+      </Suspense>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-neutral-900">Integrações Google</h1>
@@ -442,9 +449,9 @@ export default function IntegracoesPage() {
         </div>
       </div>
 
-      {connectionAlert && (
-        <div className={`mb-4 p-3 rounded-lg text-sm ${connectionAlert.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-          {connectionAlert}
+      {alert && (
+        <div className={`mb-4 p-3 rounded-lg text-sm ${alert.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {alert}
         </div>
       )}
 
