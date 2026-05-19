@@ -14,4 +14,5 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   await fastify.register(import('./leads.js'))
   await fastify.register(import('./dashboard.js'))
   await fastify.register(import('./integracoes.js'))
+  await fastify.register(import('./google-oauth.js'))
 }
