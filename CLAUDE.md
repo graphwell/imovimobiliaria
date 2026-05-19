@@ -93,11 +93,16 @@ Monorepo Turborepo + pnpm workspaces.
 - Preços médios por bairro (`precoM2MedioVenda`, `valorizacao12meses`) — necessários para o ranking funcionar corretamente
 - Fotos reais dos imóveis
 
+**Integrações Google (implementadas, precisam de variáveis no VPS)**
+- Google Sheets — `GOOGLE_SHEETS_ID` e `secrets/google-service-account.json` no VPS
+- Gmail/SMTP — `SMTP_PASS` (Senha de App) no VPS
+- Google Analytics 4 — `GA4_MEASUREMENT_ID` e `GA4_API_SECRET` no VPS
+- Google OAuth (Meu Negócio + Search Console) — autorização pelo admin necessária
+
 **Integrações pendentes**
 - WhatsApp click-to-chat nos imóveis (`NEXT_PUBLIC_WHATSAPP_NUMBER`)
 - Google Tag Manager (`NEXT_PUBLIC_GTM_ID`)
 - Mapa Leaflet nas páginas de imóvel e bairro (componente instalado, não usado)
-- SEO: Schema.org `RealEstateListing`, `Place`, `Article`
 
 ---
 
@@ -172,8 +177,8 @@ psql -U imov -d imov_db
 # Rodar seeds novamente (cuidado em produção)
 cd /root/imovimobiliaria && pnpm --filter @imov/api exec prisma db seed
 
-# Rodar migrations em produção
-cd /root/imovimobiliaria && pnpm --filter @imov/api exec prisma migrate deploy
+# Aplicar mudanças de schema (sem arquivos de migration — usa db push)
+cd /root/imovimobiliaria && pnpm --filter @imov/api exec prisma db push
 ```
 
 ### Deploy do frontend
@@ -287,7 +292,7 @@ imov-imobiliaria/
 
 ## Variáveis de ambiente
 
-### API (`apps/api/.env`)
+### API (`apps/api/.env`) — variáveis base
 | Variável | Exemplo | Descrição |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://imov:senha@localhost:5432/imov_db` | PostgreSQL |
@@ -298,6 +303,27 @@ imov-imobiliaria/
 | `HOST` | `0.0.0.0` | Interface de escuta |
 | `NODE_ENV` | `production` | Ambiente |
 
+### API — integrações Google
+| Variável | Como obter | Descrição |
+|---|---|---|
+| `ADMIN_EMAIL` | `imovimobiliariace@gmail.com` | Email que recebe alertas de leads |
+| `GOOGLE_CLIENT_ID` | Google Cloud → APIs & Services → Credentials → OAuth 2.0 Client | Client ID para OAuth |
+| `GOOGLE_CLIENT_SECRET` | Mesmo lugar do Client ID | Client Secret (regenerar se exposto) |
+| `GOOGLE_REDIRECT_URI` | `https://api.somar.ia.br/google/callback` | URI de redirecionamento OAuth (cadastrar no Google Cloud) |
+| `GOOGLE_SHEETS_ID` | Gerado automaticamente nos logs do PM2 na 1ª execução | ID da planilha "IMOV — Leads" |
+| `SMTP_HOST` | `smtp.gmail.com` | Servidor SMTP |
+| `SMTP_PORT` | `587` | Porta SMTP (587 = TLS, 465 = SSL) |
+| `SMTP_USER` | `imovimobiliariace@gmail.com` | Email remetente |
+| `SMTP_PASS` | Ver instruções abaixo | Senha de App do Gmail (16 chars) |
+| `GA4_MEASUREMENT_ID` | GA4 → Admin → Streams de dados → ID de medição | Ex: `G-XXXXXXXXXX` |
+| `GA4_API_SECRET` | GA4 → Admin → Streams → Measurement Protocol API secrets → Criar | Segredo para Measurement Protocol |
+
+### API — arquivo de credenciais (nunca versionar)
+- Caminho no VPS: `/root/imovimobiliaria/apps/api/secrets/google-service-account.json`
+- Conta de serviço: `imov-automation@imobiliaria-496802.iam.gserviceaccount.com`
+- Projeto GCP: `imobiliaria-496802`
+- Para enviar ao VPS: `scp google-service-account.json root@147.79.86.65:/root/imovimobiliaria/apps/api/secrets/`
+
 ### Web (`apps/web` — configurar no Vercel)
 | Variável | Valor em produção | Descrição |
 |---|---|---|
@@ -305,6 +331,50 @@ imov-imobiliaria/
 | `NEXT_PUBLIC_WHATSAPP_NUMBER` | `5585XXXXXXXXX` | WhatsApp (55 + DDD + número) |
 | `NEXT_PUBLIC_GTM_ID` | `GTM-XXXXXXX` | Google Tag Manager |
 | `NEXT_PUBLIC_SITE_URL` | `https://imov.somar.ia.br` | URL pública (SEO) |
+| `NEXT_PUBLIC_GSC_VERIFICATION` | Google Search Console → Verificação de propriedade → Tag HTML | Código de verificação do Search Console |
+
+---
+
+## Integrações Google — setup completo
+
+### Credenciais no VPS (1 vez)
+
+**1. Copiar o arquivo de conta de serviço**
+O arquivo `google-service-account.json` está no seu computador local em `apps/api/secrets/` mas é ignorado pelo git. Para enviá-lo ao VPS:
+```bash
+# No seu computador local (PowerShell ou terminal):
+scp C:\SOMAR\imov_imobiliaria\apps\api\secrets\google-service-account.json root@147.79.86.65:/root/imovimobiliaria/apps/api/secrets/
+
+# No VPS, confirmar:
+ls /root/imovimobiliaria/apps/api/secrets/
+```
+
+**2. Senha de App do Gmail (para SMTP_PASS)**
+1. Acesse [myaccount.google.com/security](https://myaccount.google.com/security) com `imovimobiliariace@gmail.com`
+2. Verificação em 2 etapas deve estar **ativa** — se não, ative primeiro
+3. Acesse [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+4. Clique em "Criar senha de app" → selecione **Outro (nome personalizado)** → nome: `IMOV API`
+5. Copie os 16 caracteres gerados (ex: `abcd efgh ijkl mnop`)
+6. No VPS: `nano /root/imovimobiliaria/apps/api/.env` → adicione `SMTP_PASS=abcdefghijklmnop` (sem espaços)
+
+**3. GA4 Measurement ID e API Secret**
+- **Measurement ID**: [analytics.google.com](https://analytics.google.com) → Admin (engrenagem) → Fluxos de dados → clique no fluxo → campo "ID DE MEDIÇÃO" (começa com `G-`)
+- **API Secret**: mesma tela → seção "API Secrets do Measurement Protocol" → "Criar" → copie o valor
+- No VPS: adicione `GA4_MEASUREMENT_ID=G-XXXXXXXX` e `GA4_API_SECRET=xxxxx` no `.env`
+
+**4. OAuth Google (Google Meu Negócio + Search Console)**
+- No Google Cloud Console → projeto `imobiliaria-496802` → APIs & Services → Credentials → OAuth 2.0 Client → editar
+- Authorized redirect URIs → adicionar: `https://api.somar.ia.br/google/callback`
+- No VPS: adicione `GOOGLE_CLIENT_ID=xxx` e `GOOGLE_CLIENT_SECRET=xxx` no `.env`
+- Acesse `/admin/integracoes` → clique "Conectar com Google" → autorize com `imovimobiliariace@gmail.com`
+
+**5. Reiniciar após configurar todas as variáveis**
+```bash
+pm2 restart imov-api
+pm2 logs imov-api --lines 20
+# Verificar se aparece: "[Cron] Agendamentos ativos"
+# Verificar se aparece: "GOOGLE_SHEETS_ID=1abc..." (só na 1ª execução sem o ID)
+```
 
 ---
 
