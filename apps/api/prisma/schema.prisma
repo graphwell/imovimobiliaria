@@ -325,3 +325,17 @@ model User {
   @@index([email])
   @@map("users")
 }
+
+model GoogleToken {
+  id           String   @id @default(uuid())
+  service      String   @unique
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  scopes       String[]
+  email        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("google_tokens")
+}
