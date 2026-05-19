@@ -46,8 +46,50 @@ export default async function ImovelDetalhePage({ params }: { params: { slug: st
   const fotos = Array.isArray(imovel.fotos) ? imovel.fotos : []
   const fotoCapa = fotos.find(f => f.tipo === 'capa') ?? fotos[0]
   const temFotoReal = fotoCapa?.url && !fotoCapa.url.startsWith('[')
+  const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://imov.somar.ia.br'
+
+  const schemaListing = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: imovel.titulo,
+    description: imovel.descricao ?? undefined,
+    url: `${siteUrl}/imoveis/${imovel.slug}`,
+    ...(temFotoReal && { image: fotoCapa!.url }),
+    offers: {
+      '@type': 'Offer',
+      price: preco,
+      priceCurrency: 'BRL',
+      availability: 'https://schema.org/InStock',
+    },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: imovel.bairro.nome,
+      addressRegion: 'CE',
+      addressCountry: 'BR',
+    },
+    numberOfRooms: imovel.quartos || undefined,
+    numberOfBathroomsTotal: imovel.banheiros || undefined,
+    floorSize: {
+      '@type': 'QuantitativeValue',
+      value: Number(imovel.areaTotal),
+      unitCode: 'MTK',
+    },
+  }
+
+  const schemaBreadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Início', item: siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Imóveis', item: `${siteUrl}/imoveis` },
+      { '@type': 'ListItem', position: 3, name: imovel.titulo, item: `${siteUrl}/imoveis/${imovel.slug}` },
+    ],
+  }
 
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaListing) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaBreadcrumb) }} />
     <main className="min-h-screen bg-neutral-50">
       <div className="container-imov py-8">
 
@@ -149,5 +191,6 @@ export default async function ImovelDetalhePage({ params }: { params: { slug: st
         )}
       </div>
     </main>
+    </>
   )
 }

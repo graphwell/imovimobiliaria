@@ -22,8 +22,43 @@ const METRICAS = [
 
 export default function HomePage() {
   const whatsapp = process.env['NEXT_PUBLIC_WHATSAPP_NUMBER'] ?? '5585999999999'
+  const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://imov.somar.ia.br'
+
+  const schemaOrg = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateAgent',
+    name: 'IMOV Imobiliária',
+    url: siteUrl,
+    logo: `${siteUrl}/logo.png`,
+    description: 'Portal imobiliário com inteligência de mercado em Fortaleza e região metropolitana.',
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Fortaleza',
+      addressRegion: 'CE',
+      addressCountry: 'BR',
+    },
+    areaServed: { '@type': 'City', name: 'Fortaleza' },
+  }
+
+  const schemaWebsite = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'IMOV Imobiliária',
+    url: siteUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${siteUrl}/imoveis?busca={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
 
   return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaWebsite) }} />
     <main>
 
       {/* ─── HERO ─── */}
@@ -137,5 +172,6 @@ export default function HomePage() {
       <WhatsAppCTA numero={whatsapp} />
 
     </main>
+    </>
   )
 }

@@ -31,6 +31,9 @@ export const metadata: Metadata = {
     siteName: 'IMOV Imobiliária',
   },
   robots: { index: true, follow: true },
+  ...(process.env['NEXT_PUBLIC_GSC_VERIFICATION'] && {
+    verification: { google: process.env['NEXT_PUBLIC_GSC_VERIFICATION'] },
+  }),
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
