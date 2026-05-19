@@ -79,6 +79,11 @@ export const adminApi = {
   },
 
   bairros: () => request<{ data: { id: string; nome: string; slug: string; cidadeId: string; cidade: { id: string; nome: string } }[] }>('/bairros'),
+
+  integracoes: {
+    status: () => request<{ data: { sheets: { ok: boolean; spreadsheetId?: string; url?: string; error?: string }; gmail: { ok: boolean; error?: string }; analytics: { ok: boolean; error?: string } } }>('/admin/integracoes/status'),
+    sheetsLinhas: () => request<{ data: string[][] }>('/admin/integracoes/sheets/linhas'),
+  },
 }
 
 export interface DashboardMetricas {
