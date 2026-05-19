@@ -489,7 +489,7 @@ export default function IntegracoesPage() {
       <div className="mt-6 p-4 bg-neutral-50 rounded-xl text-xs text-neutral-500 space-y-1">
         <p><strong>OAuth (Meu Negócio + Search Console):</strong> Requer GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no .env da API.</p>
         <p><strong>Sheets + Gmail + GA4:</strong> Funcionam via conta de serviço/SMTP — sem OAuth necessário.</p>
-        <p><strong>Redirect URI cadastrado no Google Cloud:</strong> <code>https://api.somar.ia.br/admin/google/callback</code></p>
+        <p><strong>Redirect URI cadastrado no Google Cloud:</strong> <code>https://api.somar.ia.br/google/callback</code></p>
       </div>
     </div>
   )
