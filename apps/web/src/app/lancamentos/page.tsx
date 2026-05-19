@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 async function getLancamentos(): Promise<PaginatedResponse<ImovelListItem>> {
   try {
     const res = await fetch(
-      `${process.env['NEXT_PUBLIC_API_URL']}/imoveis?novo=true&ordenar=recente`,
+      `${process.env['NEXT_PUBLIC_API_URL']}/imoveis?novo=true&ordenar=mais_recente`,
       { next: { revalidate: 60 } }
     )
     if (!res.ok) return { data: [], total: 0, page: 1, totalPages: 1, limit: 20 }
