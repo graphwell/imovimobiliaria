@@ -7,7 +7,7 @@ const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://imov.somar.ia.b
 async function getWebmastersClient(prisma: PrismaClient) {
   const auth = await getValidClient(prisma)
   if (!auth) throw new Error('Google OAuth não conectado.')
-  return google.searchconsole({ version: 'v1', auth })
+  return google.webmasters({ version: 'v3', auth })
 }
 
 export async function getSitemapStatus(prisma: PrismaClient) {
