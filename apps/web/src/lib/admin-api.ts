@@ -107,7 +107,7 @@ export const adminApi = {
       }),
 
     sitemaps: () => request<{ data: unknown[] }>('/admin/google/search-console/sitemaps'),
-    submitSitemap: () => request('/admin/google/search-console/submit-sitemap', { method: 'POST' }),
+    submitSitemap: () => request('/admin/google/search-console/submit-sitemap', { method: 'POST', body: JSON.stringify({}) }),
     searchAnalytics: (startDate?: string, endDate?: string) => {
       const q = new URLSearchParams()
       if (startDate) q.set('startDate', startDate)

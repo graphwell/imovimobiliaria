@@ -94,7 +94,7 @@ export async function appendLeadToSheet(lead: LeadSheetData): Promise<void> {
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: 'Leads!A:L',
+      range: 'A:L',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [[
@@ -124,7 +124,7 @@ export async function getLastRows(count = 5): Promise<string[][]> {
     const auth = getAuth()
     const sheets = google.sheets({ version: 'v4', auth })
     const spreadsheetId = await getOrCreateSpreadsheetId()
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'Leads!A:L' })
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: 'A:L' })
     const rows = res.data.values ?? []
     return rows.slice(1).slice(-count)
   } catch (err) {
@@ -137,6 +137,10 @@ export async function testConnection(): Promise<{ ok: boolean; spreadsheetId?: s
   if (!isEnabled()) return { ok: false, error: 'Credenciais não encontradas em secrets/google-service-account.json' }
   try {
     const spreadsheetId = await getOrCreateSpreadsheetId()
+    const auth = getAuth()
+    const sheets = google.sheets({ version: 'v4', auth })
+    // Testa leitura real para validar permissões
+    await sheets.spreadsheets.values.get({ spreadsheetId, range: 'A1:A1' })
     return { ok: true, spreadsheetId, url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}` }
   } catch (err) {
     return { ok: false, error: String(err) }
