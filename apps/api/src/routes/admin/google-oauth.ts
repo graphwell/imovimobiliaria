@@ -34,6 +34,7 @@ export default async function googleOAuthRoutes(fastify: FastifyInstance) {
       const accounts = await business.getAccounts(fastify.prisma)
       return reply.send({ data: accounts })
     } catch (err) {
+      fastify.log.error({ err }, '[GBP] getAccounts falhou')
       return reply.code(503).send({ error: String(err) })
     }
   })
