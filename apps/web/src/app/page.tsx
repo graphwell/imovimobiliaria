@@ -13,16 +13,68 @@ export const metadata: Metadata = {
     'Portal imobiliário com inteligência de mercado em Fortaleza e região metropolitana. Comprar, investir, financiar ou Minha Casa Minha Vida.',
 }
 
-const METRICAS = [
-  { valor: 'R$ 6.800/m²', label: 'Preço médio Fortaleza', icone: '📊' },
-  { valor: '+5,2%', label: 'Valorização 12 meses', icone: '📈' },
-  { valor: 'Cocó', label: 'Bairro em alta', icone: '🔥' },
-  { valor: '15 imóveis', label: 'Disponíveis agora', icone: '🏠' },
-]
+const API = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
-export default function HomePage() {
-  const whatsapp = process.env['NEXT_PUBLIC_WHATSAPP_NUMBER'] ?? '5585999999999'
+interface Indicadores {
+  precoM2Medio: number | null
+  valorizacao12meses: number | null
+  bairroEmAlta: string | null
+  totalImoveis: number
+}
+
+interface Stats {
+  totalImoveis: number
+  totalBairros: number
+  totalCidades: number
+}
+
+async function getIndicadores(): Promise<Indicadores | null> {
+  try {
+    const res = await fetch(`${API}/mercado/indicadores`, { next: { revalidate: 3600 } })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+async function getStats(): Promise<Stats | null> {
+  try {
+    const res = await fetch(`${API}/stats`, { next: { revalidate: 300 } })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
+function formatPrecoM2(valor: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0,
+  }).format(valor) + '/m²'
+}
+
+export default async function HomePage() {
+  const whatsapp = process.env['NEXT_PUBLIC_WHATSAPP_NUMBER']
+  const whatsappValido = whatsapp && whatsapp !== '5585999999999' && whatsapp.length >= 12
   const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://imov.somar.ia.br'
+
+  const [indicadores, stats] = await Promise.all([getIndicadores(), getStats()])
+
+  type Metrica = { valor: string; label: string; icone: string }
+  const metricas: Metrica[] = []
+  if (indicadores) {
+    if (indicadores.precoM2Medio != null)
+      metricas.push({ valor: formatPrecoM2(indicadores.precoM2Medio), label: 'Preço médio Fortaleza', icone: '📊' })
+    if (indicadores.valorizacao12meses != null)
+      metricas.push({ valor: `+${indicadores.valorizacao12meses.toFixed(1).replace('.', ',')}%`, label: 'Valorização 12 meses', icone: '📈' })
+    if (indicadores.bairroEmAlta)
+      metricas.push({ valor: indicadores.bairroEmAlta, label: 'Bairro em alta', icone: '🔥' })
+    if (indicadores.totalImoveis > 0)
+      metricas.push({ valor: `${indicadores.totalImoveis} imóve${indicadores.totalImoveis !== 1 ? 'is' : 'l'}`, label: 'Disponíveis agora', icone: '🏠' })
+  }
 
   const schemaOrg = {
     '@context': 'https://schema.org',
@@ -62,7 +114,6 @@ export default function HomePage() {
     <main>
 
       {/* ─── HERO ─── */}
-      {/* Para usar foto real: coloque a imagem em apps/web/public/hero.jpg e troque o fundo abaixo */}
       <section className="relative min-h-[700px] flex items-center overflow-hidden">
         <div className="absolute inset-0 bg-[#0a1628]" />
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d2545] to-[#0a1628]" />
@@ -102,20 +153,32 @@ export default function HomePage() {
             <SearchBar compact />
           </div>
 
-          {/* Stats */}
-          <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-neutral-400">
-            <span className="flex items-center gap-1.5">
-              <span className="text-brand-400 font-bold">15+</span> Imóveis disponíveis
-            </span>
-            <span className="text-white/20 hidden sm:inline">·</span>
-            <span className="flex items-center gap-1.5">
-              <span className="text-brand-400 font-bold">10</span> Bairros mapeados
-            </span>
-            <span className="text-white/20 hidden sm:inline">·</span>
-            <span className="flex items-center gap-1.5">
-              <span className="text-brand-400 font-bold">5</span> Cidades
-            </span>
-          </div>
+          {/* Stats dinâmicos */}
+          {stats && (stats.totalImoveis > 0 || stats.totalBairros > 0 || stats.totalCidades > 0) && (
+            <div className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-neutral-400">
+              {stats.totalImoveis > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-brand-400 font-bold">{stats.totalImoveis}+</span> Imóveis disponíveis
+                </span>
+              )}
+              {stats.totalImoveis > 0 && stats.totalBairros > 0 && (
+                <span className="text-white/20 hidden sm:inline">·</span>
+              )}
+              {stats.totalBairros > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-brand-400 font-bold">{stats.totalBairros}</span> Bairros mapeados
+                </span>
+              )}
+              {stats.totalBairros > 0 && stats.totalCidades > 0 && (
+                <span className="text-white/20 hidden sm:inline">·</span>
+              )}
+              {stats.totalCidades > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-brand-400 font-bold">{stats.totalCidades}</span> Cidades
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -129,47 +192,49 @@ export default function HomePage() {
         <BairrosSection />
       </Suspense>
 
-      {/* ─── ÍNDICE DE MERCADO ─── */}
-      <section className="py-20 bg-white">
-        <div className="container-imov">
-          <div className="text-center mb-12">
-            <p className="text-brand-500 text-sm font-semibold uppercase tracking-wider mb-2">
-              Dados do mercado
-            </p>
-            <h2 className="font-display text-3xl font-bold text-neutral-900">
-              Mercado Imobiliário — Fortaleza
-            </h2>
-            <p className="text-neutral-500 mt-2">
-              Indicadores da cidade e tendências regionais
+      {/* ─── ÍNDICE DE MERCADO (só renderiza se a API retornar dados) ─── */}
+      {metricas.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="container-imov">
+            <div className="text-center mb-12">
+              <p className="text-brand-500 text-sm font-semibold uppercase tracking-wider mb-2">
+                Dados do mercado
+              </p>
+              <h2 className="font-display text-3xl font-bold text-neutral-900">
+                Mercado Imobiliário — Fortaleza
+              </h2>
+              <p className="text-neutral-500 mt-2">
+                Indicadores da cidade e tendências regionais
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {metricas.map(m => (
+                <div
+                  key={m.label}
+                  className="bg-white rounded-2xl border border-neutral-100 shadow-md p-6 text-center hover:shadow-lg transition-shadow"
+                >
+                  <span className="text-3xl">{m.icone}</span>
+                  <p className="font-display text-2xl font-bold text-neutral-900 mt-3">{m.valor}</p>
+                  <p className="text-sm text-neutral-500 mt-1">{m.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center text-xs text-neutral-400">
+              ⚠️ Dados estimados. Atualização mensal. Não constituem avaliação técnica oficial.
             </p>
           </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {METRICAS.map(m => (
-              <div
-                key={m.label}
-                className="bg-white rounded-2xl border border-neutral-100 shadow-md p-6 text-center hover:shadow-lg transition-shadow"
-              >
-                <span className="text-3xl">{m.icone}</span>
-                <p className="font-display text-2xl font-bold text-neutral-900 mt-3">{m.valor}</p>
-                <p className="text-sm text-neutral-500 mt-1">{m.label}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-center text-xs text-neutral-400">
-            ⚠️ Dados estimados. Atualização mensal. Não constituem avaliação técnica oficial.
-          </p>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── ARTIGOS (Suspense) ─── */}
       <Suspense fallback={<ArtigosSkeleton />}>
         <ArtigosSection />
       </Suspense>
 
-      {/* ─── CTA WHATSAPP (Client — lê sessionStorage) ─── */}
-      <WhatsAppCTA numero={whatsapp} />
+      {/* ─── CTA WHATSAPP — só renderiza se o número for real ─── */}
+      {whatsappValido && <WhatsAppCTA numero={whatsapp!} />}
 
     </main>
     </>
