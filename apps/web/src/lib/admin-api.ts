@@ -55,6 +55,8 @@ export const adminApi = {
       const q = params ? '?' + new URLSearchParams(params).toString() : ''
       return request<{ data: AdminImovel[]; total: number; page: number; totalPages: number }>(`/admin/imoveis${q}`)
     },
+    get: (id: string) =>
+      request<{ success: boolean; data: AdminImovelDetalhe }>(`/admin/imoveis/${id}`),
     create: (body: Record<string, unknown>) =>
       request<{ success: boolean; data: AdminImovel }>('/admin/imoveis', { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: Record<string, unknown>) =>
@@ -147,6 +149,25 @@ export interface AdminImovel {
   bairro: { nome: string; slug: string }
   cidade: { nome: string; slug: string }
   createdAt: string
+}
+
+export interface AdminImovelDetalhe {
+  id: string; slug: string; titulo: string; descricao: string
+  tipo: string; modalidade: string; status: string
+  preco: string; precoCondominio?: string; precoIptu?: string
+  areaTotal: string; areaPrivativa?: string
+  quartos: number; suites: number; banheiros: number; vagas: number
+  andarPavimento?: number; totalAndares?: number; anoConstrucao?: number
+  aceitaFinanciamento: boolean; aceitaFgts: boolean; aceitaConsorcio: boolean; elegivelMcmv: boolean
+  novo: boolean; destaque: boolean; oportunidade: boolean
+  endereco: string; numero: string; complemento?: string; cep: string
+  bairroId: string; cidadeId: string
+  construtoraNome?: string; latitude?: string; longitude?: string
+  diferenciais: string[]
+  fotos: { url: string; legenda?: string; ordem: number; tipo: string }[]
+  metaTitle?: string; metaDescription?: string
+  bairro: { id: string; nome: string; slug: string; cidadeId: string }
+  cidade: { id: string; nome: string; slug: string }
 }
 
 export interface AdminLead {

@@ -37,6 +37,19 @@ export default async function adminImoveisRoutes(fastify: FastifyInstance) {
     return reply.send(buildPaginatedResponse(data, total, page, limit))
   })
 
+  fastify.get('/imoveis/:id', async (request, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+    const imovel = await fastify.prisma.imovel.findUnique({
+      where: { id },
+      include: {
+        bairro: { select: { id: true, nome: true, slug: true, cidadeId: true } },
+        cidade: { select: { id: true, nome: true, slug: true } },
+      },
+    })
+    if (!imovel) return reply.code(404).send({ error: 'Imóvel não encontrado' })
+    return reply.send({ success: true, data: imovel })
+  })
+
   fastify.post('/imoveis', async (request, reply) => {
     const body = createImovelSchema.parse(request.body)
     const slug = body.slug ?? slugify(`${body.titulo} ${body.endereco}`)

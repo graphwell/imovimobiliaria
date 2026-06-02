@@ -11,6 +11,8 @@ interface ImovelFormProps {
   imovelId?: string
 }
 
+type Foto = { url: string; legenda?: string; ordem: number; tipo: string }
+
 const TIPOS = ['APARTAMENTO','CASA','TERRENO','COBERTURA','COMERCIAL','KITNET']
 const MODALIDADES = ['VENDA','LOCACAO','LANCAMENTO']
 const STATUS_OPTS = ['DISPONIVEL','VENDIDO','ALUGADO','RESERVADO','INATIVO']
@@ -36,6 +38,8 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
   const [erro, setErro] = useState('')
   const [diferencialInput, setDiferencialInput] = useState('')
 
+  const [fotoInput, setFotoInput] = useState('')
+
   const [form, setForm] = useState({
     titulo: '', descricao: '', tipo: 'APARTAMENTO', modalidade: 'VENDA', status: 'DISPONIVEL',
     preco: '', areaTotal: '', areaPrivativa: '', quartos: '0', suites: '0', banheiros: '1', vagas: '0',
@@ -47,6 +51,7 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
     bairroId: '', cidadeId: '',
     construtoraNome: '', latitude: '', longitude: '',
     diferenciais: [] as string[],
+    fotos: [] as { url: string; legenda?: string; ordem: number; tipo: string }[],
     metaTitle: '', metaDescription: '',
     ...initialData,
   })
@@ -63,6 +68,32 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
   function handleBairro(bairroId: string) {
     const b = bairros.find(b => b.id === bairroId)
     if (b) setForm(f => ({ ...f, bairroId: b.id, cidadeId: b.cidadeId }))
+  }
+
+  function addFoto() {
+    const url = fotoInput.trim()
+    if (!url) return
+    const fotos = form.fotos as Foto[]
+    if (fotos.some(f => f.url === url)) { setFotoInput(''); return }
+    const tipo = fotos.length === 0 ? 'capa' : 'interior'
+    setForm(f => ({ ...f, fotos: [...(f.fotos as Foto[]), { url, ordem: fotos.length, tipo }] }))
+    setFotoInput('')
+  }
+
+  function removeFoto(url: string) {
+    setForm(f => {
+      const fotos = (f.fotos as Foto[]).filter(x => x.url !== url).map((x, i) => ({ ...x, ordem: i, tipo: i === 0 ? 'capa' : x.tipo === 'capa' ? 'interior' : x.tipo }))
+      return { ...f, fotos }
+    })
+  }
+
+  function moveFoto(index: number, dir: -1 | 1) {
+    const fotos = [...(form.fotos as Foto[])]
+    const target = index + dir
+    if (target < 0 || target >= fotos.length) return
+    ;[fotos[index], fotos[target]] = [fotos[target]!, fotos[index]!]
+    const reordered = fotos.map((f, i) => ({ ...f, ordem: i, tipo: i === 0 ? 'capa' : f.tipo === 'capa' ? 'interior' : f.tipo }))
+    setForm(f => ({ ...f, fotos: reordered }))
   }
 
   function addDiferencial() {
@@ -104,6 +135,7 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
         ...(form.latitude ? { latitude: Number(form.latitude) } : {}),
         ...(form.longitude ? { longitude: Number(form.longitude) } : {}),
         diferenciais: form.diferenciais,
+        fotos: form.fotos,
         ...(form.metaTitle ? { metaTitle: form.metaTitle } : {}),
         ...(form.metaDescription ? { metaDescription: form.metaDescription } : {}),
       }
@@ -282,6 +314,46 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
               </span>
             ))}
           </div>
+        </div>
+
+        {/* Fotos */}
+        <div className="bg-white rounded-xl border border-neutral-200 p-5">
+          <h2 className="font-semibold text-neutral-900 mb-1">Fotos</h2>
+          <p className="text-xs text-neutral-400 mb-4">Cole URLs de imagens (JPG, PNG, WebP). A primeira foto é a capa.</p>
+          <div className="flex gap-2 mb-4">
+            <input
+              value={fotoInput}
+              onChange={e => setFotoInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFoto() } }}
+              className={inputCls}
+              placeholder="https://exemplo.com/foto.jpg"
+            />
+            <button type="button" onClick={addFoto} className="px-4 py-2 bg-brand-50 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-100 transition-colors whitespace-nowrap">
+              Adicionar
+            </button>
+          </div>
+          {(form.fotos as Foto[]).length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {(form.fotos as Foto[]).map((foto, i) => (
+                <div key={foto.url} className="relative group rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={foto.url} alt={`Foto ${i + 1}`} className="w-full h-36 object-cover" onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Foto' }} />
+                  {i === 0 && (
+                    <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-brand-500 text-white text-xs rounded font-medium">Capa</span>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    {i > 0 && (
+                      <button type="button" onClick={() => moveFoto(i, -1)} className="p-1.5 bg-white/80 rounded text-neutral-700 hover:bg-white text-xs" title="Mover para frente">◀</button>
+                    )}
+                    {i < (form.fotos as Foto[]).length - 1 && (
+                      <button type="button" onClick={() => moveFoto(i, 1)} className="p-1.5 bg-white/80 rounded text-neutral-700 hover:bg-white text-xs" title="Mover para trás">▶</button>
+                    )}
+                    <button type="button" onClick={() => removeFoto(foto.url)} className="p-1.5 bg-red-500/80 rounded text-white hover:bg-red-600 text-xs" title="Remover">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* SEO */}
