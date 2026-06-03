@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { CardImovel } from '@imov/ui'
 import type { ImovelDetalhe, ImovelListItem } from '@imov/types'
+import { GaleriaFotos } from '../../../components/GaleriaFotos'
 
 interface DetalheResponse {
   data: ImovelDetalhe
@@ -43,9 +44,11 @@ export default async function ImovelDetalhePage({ params }: { params: { slug: st
 
   const { data: imovel, similares } = result
   const preco = Number(imovel.preco)
-  const fotos = Array.isArray(imovel.fotos) ? imovel.fotos : []
+  const fotos = (Array.isArray(imovel.fotos) ? imovel.fotos : [])
+    .filter(f => f.url && !f.url.startsWith('['))
+    .sort((a, b) => a.ordem - b.ordem)
   const fotoCapa = fotos.find(f => f.tipo === 'capa') ?? fotos[0]
-  const temFotoReal = fotoCapa?.url && !fotoCapa.url.startsWith('[')
+  const temFotoReal = !!fotoCapa
   const siteUrl = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://imov.somar.ia.br'
 
   const schemaListing = {
@@ -102,13 +105,7 @@ export default async function ImovelDetalhePage({ params }: { params: { slug: st
         </nav>
 
         <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-          <div className="h-64 md:h-96 bg-neutral-200 flex items-center justify-center">
-            {temFotoReal ? (
-              <img src={fotoCapa!.url} alt={imovel.titulo} className="w-full h-full object-cover" />
-            ) : (
-              <p className="text-neutral-400 text-sm">Fotos em breve</p>
-            )}
-          </div>
+          <GaleriaFotos fotos={fotos} titulo={imovel.titulo} />
 
           <div className="p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
