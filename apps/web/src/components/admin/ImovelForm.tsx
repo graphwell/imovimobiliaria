@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { adminApi } from '../../lib/admin-api'
 
@@ -33,12 +33,14 @@ const checkCls = "h-4 w-4 rounded text-brand-500 border-neutral-300 focus:ring-b
 
 export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [bairros, setBairros] = useState<Bairro[]>([])
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [diferencialInput, setDiferencialInput] = useState('')
-
-  const [fotoInput, setFotoInput] = useState('')
+  const [uploadingCount, setUploadingCount] = useState(0)
+  const [uploadErro, setUploadErro] = useState('')
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   const [form, setForm] = useState({
     titulo: '', descricao: '', tipo: 'APARTAMENTO', modalidade: 'VENDA', status: 'DISPONIVEL',
@@ -70,14 +72,28 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
     if (b) setForm(f => ({ ...f, bairroId: b.id, cidadeId: b.cidadeId }))
   }
 
-  function addFoto() {
-    const url = fotoInput.trim()
-    if (!url) return
-    const fotos = form.fotos as Foto[]
-    if (fotos.some(f => f.url === url)) { setFotoInput(''); return }
-    const tipo = fotos.length === 0 ? 'capa' : 'interior'
-    setForm(f => ({ ...f, fotos: [...(f.fotos as Foto[]), { url, ordem: fotos.length, tipo }] }))
-    setFotoInput('')
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    setUploadErro('')
+    setUploadingCount(files.length)
+    try {
+      const results = await Promise.all(files.map(file => adminApi.uploadImagem(file)))
+      setForm(f => {
+        const existing = f.fotos as Foto[]
+        const novas = results.map((r, i) => ({
+          url: r.url,
+          ordem: existing.length + i,
+          tipo: existing.length + i === 0 ? 'capa' : 'interior',
+        }))
+        return { ...f, fotos: [...existing, ...novas] }
+      })
+    } catch (err) {
+      setUploadErro(err instanceof Error ? err.message : 'Erro no upload')
+    } finally {
+      setUploadingCount(0)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   function removeFoto(url: string) {
@@ -87,13 +103,23 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
     })
   }
 
-  function moveFoto(index: number, dir: -1 | 1) {
-    const fotos = [...(form.fotos as Foto[])]
-    const target = index + dir
-    if (target < 0 || target >= fotos.length) return
-    ;[fotos[index], fotos[target]] = [fotos[target]!, fotos[index]!]
-    const reordered = fotos.map((f, i) => ({ ...f, ordem: i, tipo: i === 0 ? 'capa' : f.tipo === 'capa' ? 'interior' : f.tipo }))
-    setForm(f => ({ ...f, fotos: reordered }))
+  function handleDragStart(e: React.DragEvent, index: number) {
+    e.dataTransfer.setData('text/plain', String(index))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleDrop(e: React.DragEvent, dropIndex: number) {
+    e.preventDefault()
+    setDragOverIndex(null)
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
+    if (isNaN(dragIndex) || dragIndex === dropIndex) return
+    setForm(f => {
+      const fotos = [...(f.fotos as Foto[])]
+      const [dragged] = fotos.splice(dragIndex, 1)
+      fotos.splice(dropIndex, 0, dragged!)
+      const reordered = fotos.map((x, i) => ({ ...x, ordem: i, tipo: i === 0 ? 'capa' : x.tipo === 'capa' ? 'interior' : x.tipo }))
+      return { ...f, fotos: reordered }
+    })
   }
 
   function addDiferencial() {
@@ -318,37 +344,65 @@ export function ImovelForm({ initialData, imovelId }: ImovelFormProps) {
 
         {/* Fotos */}
         <div className="bg-white rounded-xl border border-neutral-200 p-5">
-          <h2 className="font-semibold text-neutral-900 mb-1">Fotos</h2>
-          <p className="text-xs text-neutral-400 mb-4">Cole URLs de imagens (JPG, PNG, WebP). A primeira foto é a capa.</p>
-          <div className="flex gap-2 mb-4">
-            <input
-              value={fotoInput}
-              onChange={e => setFotoInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFoto() } }}
-              className={inputCls}
-              placeholder="https://exemplo.com/foto.jpg"
-            />
-            <button type="button" onClick={addFoto} className="px-4 py-2 bg-brand-50 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-100 transition-colors whitespace-nowrap">
-              Adicionar
+          <h2 className="font-semibold text-neutral-900 mb-1">Fotos e Vídeos</h2>
+          <p className="text-xs text-neutral-400 mb-4">
+            Primeira foto é a capa. Arraste para reordenar. JPG, PNG, WebP, MP4 — máx. 20 MB por arquivo.
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,video/mp4"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingCount > 0}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-100 transition-colors disabled:opacity-50"
+            >
+              {uploadingCount > 0 ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Enviando {uploadingCount} arquivo(s)...
+                </>
+              ) : (
+                '+ Adicionar fotos'
+              )}
             </button>
+            {uploadErro && <p className="text-xs text-red-600">{uploadErro}</p>}
           </div>
+
           {(form.fotos as Foto[]).length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {(form.fotos as Foto[]).map((foto, i) => (
-                <div key={foto.url} className="relative group rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={foto.url} alt={`Foto ${i + 1}`} className="w-full h-36 object-cover" onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Foto' }} />
+                <div
+                  key={foto.url}
+                  draggable
+                  onDragStart={e => handleDragStart(e, i)}
+                  onDragOver={e => { e.preventDefault(); setDragOverIndex(i) }}
+                  onDragLeave={() => setDragOverIndex(null)}
+                  onDrop={e => handleDrop(e, i)}
+                  className={`relative group rounded-lg overflow-hidden border bg-neutral-50 cursor-grab active:cursor-grabbing transition-all ${dragOverIndex === i ? 'border-brand-400 scale-95' : 'border-neutral-200'}`}
+                >
+                  {foto.url.endsWith('.mp4') ? (
+                    <video src={foto.url} className="w-full h-36 object-cover" muted />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={foto.url} alt={`Foto ${i + 1}`} className="w-full h-36 object-cover" onError={e => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Foto' }} />
+                  )}
                   {i === 0 && (
                     <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-brand-500 text-white text-xs rounded font-medium">Capa</span>
                   )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {i > 0 && (
-                      <button type="button" onClick={() => moveFoto(i, -1)} className="p-1.5 bg-white/80 rounded text-neutral-700 hover:bg-white text-xs" title="Mover para frente">◀</button>
-                    )}
-                    {i < (form.fotos as Foto[]).length - 1 && (
-                      <button type="button" onClick={() => moveFoto(i, 1)} className="p-1.5 bg-white/80 rounded text-neutral-700 hover:bg-white text-xs" title="Mover para trás">▶</button>
-                    )}
-                    <button type="button" onClick={() => removeFoto(foto.url)} className="p-1.5 bg-red-500/80 rounded text-white hover:bg-red-600 text-xs" title="Remover">✕</button>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button type="button" onClick={() => removeFoto(foto.url)} className="p-1.5 bg-red-500/80 rounded text-white hover:bg-red-600 text-sm" title="Remover">✕</button>
                   </div>
                 </div>
               ))}

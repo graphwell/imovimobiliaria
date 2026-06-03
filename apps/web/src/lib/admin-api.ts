@@ -80,6 +80,31 @@ export const adminApi = {
       request(`/admin/leads/${id}/observacoes`, { method: 'PATCH', body: JSON.stringify({ observacoes }) }),
   },
 
+  uploadImagem: async (file: File): Promise<{ success: boolean; url: string }> => {
+    const token = getToken()
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const res = await fetch(`${API}/admin/upload/imagem`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+
+    if (res.status === 401) {
+      clearToken()
+      window.location.href = '/admin/login'
+      throw new Error('Não autenticado')
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
+      throw new Error((err as { message?: string; error?: string }).message ?? (err as { message?: string; error?: string }).error ?? `HTTP ${res.status}`)
+    }
+
+    return res.json() as Promise<{ success: boolean; url: string }>
+  },
+
   bairros: () => request<{ data: { id: string; nome: string; slug: string; cidadeId: string; cidade: { id: string; nome: string } }[] }>('/bairros'),
 
   integracoes: {
