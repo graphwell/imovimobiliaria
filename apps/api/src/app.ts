@@ -1,7 +1,6 @@
 import Fastify, { type FastifyRequest, type FastifyReply } from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
-import multipart from '@fastify/multipart'
 import rateLimit from '@fastify/rate-limit'
 import jwt from '@fastify/jwt'
 import { PrismaClient } from '@prisma/client'
@@ -26,7 +25,6 @@ export async function buildApp() {
   })
 
   await app.register(cookie)
-  await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024 } })
 
   await app.register(rateLimit, {
     global: false,

@@ -1,50 +1,58 @@
 import type { FastifyInstance } from 'fastify'
-import { randomUUID } from 'crypto'
+import { z } from 'zod'
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'video/mp4'])
-const EXT_MAP: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'video/mp4': 'mp4',
-}
 
+const signedUrlSchema = z.object({
+  bucket: z.string().min(1),
+  path: z.string().min(1),
+  contentType: z.string().min(1),
+})
+
+// Upload direto do client para o Supabase Storage via signed URL.
+// Vercel Serverless Functions (runtime Node) tem limite de ~4.5MB de corpo de
+// request, e o pré-processamento de body da Vercel conflita com o parsing de
+// stream multipart do @fastify/multipart. Por isso o arquivo em si nunca passa
+// pela API — ela só gera a URL assinada (usando a service_role key) e o
+// browser faz o PUT diretamente para o Supabase.
 export default async function adminUploadRoutes(fastify: FastifyInstance) {
-  fastify.post('/upload/imagem', async (request, reply) => {
-    const data = await request.file()
-    if (!data) return reply.code(400).send({ error: 'Nenhum arquivo enviado' })
+  fastify.post('/upload/signed-url', async (request, reply) => {
+    const parsed = signedUrlSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Dados inválidos', details: parsed.error.flatten() })
+    }
+    const { bucket, path, contentType } = parsed.data
 
-    if (!ALLOWED_MIME.has(data.mimetype)) {
+    if (!ALLOWED_MIME.has(contentType)) {
       return reply.code(400).send({ error: 'Formato não suportado. Use JPG, PNG, WebP ou MP4.' })
     }
 
-    const ext = EXT_MAP[data.mimetype] ?? 'jpg'
-    const fileName = `${Date.now()}-${randomUUID()}.${ext}`
-    const buffer = await data.toBuffer()
-
     const supabaseUrl = process.env['SUPABASE_URL']
-    const supabaseKey = process.env['SUPABASE_SERVICE_KEY']
+    const supabaseServiceKey = process.env['SUPABASE_SERVICE_KEY']
+    const supabaseAnonKey = process.env['SUPABASE_ANON_KEY']
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_KEY)')
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      throw new Error('Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_KEY / SUPABASE_ANON_KEY)')
     }
 
-    const response = await fetch(`${supabaseUrl}/storage/v1/object/imoveis/${fileName}`, {
+    const response = await fetch(`${supabaseUrl}/storage/v1/object/upload/sign/${bucket}/${path}`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${supabaseKey}`,
-        'Content-Type': data.mimetype,
+        Authorization: `Bearer ${supabaseServiceKey}`,
+        'Content-Type': 'application/json',
       },
-      body: buffer,
     })
 
     if (!response.ok) {
       const err = await response.text()
-      fastify.log.error(`Supabase upload error: ${err}`)
-      throw new Error('Erro ao enviar arquivo para o storage')
+      fastify.log.error(`Supabase signed URL error: ${err}`)
+      throw new Error('Erro ao gerar URL de upload assinada')
     }
 
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/imoveis/${fileName}`
-    return reply.send({ success: true, url: publicUrl })
+    const data = (await response.json()) as { url: string }
+    const uploadUrl = `${supabaseUrl}/storage/v1${data.url}`
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+
+    return reply.send({ success: true, uploadUrl, publicUrl, apikey: supabaseAnonKey })
   })
 }

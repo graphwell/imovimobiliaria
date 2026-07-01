@@ -1,5 +1,12 @@
 const API = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
+const UPLOAD_EXT_MAP: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+}
+
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
   return localStorage.getItem('imov_admin_token')
@@ -80,29 +87,35 @@ export const adminApi = {
       request(`/admin/leads/${id}/observacoes`, { method: 'PATCH', body: JSON.stringify({ observacoes }) }),
   },
 
+  // Upload direto do browser para o Supabase Storage via signed URL — a API
+  // só gera a URL assinada (POST /admin/upload/signed-url); o arquivo em si
+  // nunca passa por ela. Necessário porque a Vercel Serverless Function tem
+  // limite de ~4.5MB de corpo de request, incompatível com upload de fotos/vídeo.
   uploadImagem: async (file: File): Promise<{ success: boolean; url: string }> => {
-    const token = getToken()
-    const formData = new FormData()
-    formData.append('file', file)
+    const ext = UPLOAD_EXT_MAP[file.type] ?? 'jpg'
+    const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`
 
-    const res = await fetch(`${API}/admin/upload/imagem`, {
+    const { uploadUrl, publicUrl, apikey } = await request<{
+      success: boolean
+      uploadUrl: string
+      publicUrl: string
+      apikey: string
+    }>('/admin/upload/signed-url', {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
+      body: JSON.stringify({ bucket: 'imoveis', path, contentType: file.type }),
     })
 
-    if (res.status === 401) {
-      clearToken()
-      window.location.href = '/admin/login'
-      throw new Error('Não autenticado')
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type, apikey },
+      body: file,
+    })
+
+    if (!uploadRes.ok) {
+      throw new Error('Erro ao enviar arquivo para o storage')
     }
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }))
-      throw new Error((err as { message?: string; error?: string }).message ?? (err as { message?: string; error?: string }).error ?? `HTTP ${res.status}`)
-    }
-
-    return res.json() as Promise<{ success: boolean; url: string }>
+    return { success: true, url: publicUrl }
   },
 
   bairros: () => request<{ data: { id: string; nome: string; slug: string; cidadeId: string; cidade: { id: string; nome: string } }[] }>('/bairros'),
