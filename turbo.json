@@ -7,6 +7,37 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
+    "@imov/api#build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**"],
+      "env": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "DIRECT_URL",
+        "JWT_SECRET",
+        "PORT",
+        "HOST",
+        "LOG_LEVEL",
+        "CORS_ORIGIN",
+        "CRON_SECRET",
+        "ADMIN_EMAIL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "GOOGLE_SERVICE_ACCOUNT_JSON",
+        "GOOGLE_SHEETS_ID",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "GA4_MEASUREMENT_ID",
+        "GA4_API_SECRET",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_KEY",
+        "SUPABASE_ANON_KEY"
+      ]
+    },
     "dev": {
       "cache": false,
       "persistent": true

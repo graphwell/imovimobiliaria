@@ -41,9 +41,15 @@ importers:
       '@fastify/static':
         specifier: ^7.0.4
         version: 7.0.4
+      '@imov/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
+      '@types/node':
+        specifier: ^20.17.10
+        version: 20.19.41
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -69,15 +75,9 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@imov/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6
-      '@types/node':
-        specifier: ^20.17.10
-        version: 20.19.41
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.23
