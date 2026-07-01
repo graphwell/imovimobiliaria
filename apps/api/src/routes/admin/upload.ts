@@ -39,7 +39,6 @@ export default async function adminUploadRoutes(fastify: FastifyInstance) {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${supabaseServiceKey}`,
-        'Content-Type': 'application/json',
       },
     })
 
