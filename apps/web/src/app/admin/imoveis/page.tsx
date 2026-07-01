@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { adminApi, type AdminImovel } from '../../../lib/admin-api'
+import NovaImportacaoModal from '../../../components/admin/NovaImportacaoModal'
 
 const STATUS_COLOR: Record<string, string> = {
   DISPONIVEL: 'bg-green-100 text-green-700',
@@ -20,6 +21,7 @@ export default function AdminImoveisPage() {
   const [loading, setLoading] = useState(true)
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
+  const [importModal, setImportModal] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -63,9 +65,17 @@ export default function AdminImoveisPage() {
           <h1 className="text-xl font-bold text-neutral-900">Imóveis</h1>
           <p className="text-sm text-neutral-500">{total} imóveis cadastrados</p>
         </div>
-        <Link href="/admin/imoveis/novo" className="px-4 py-2 bg-brand-500 text-white text-sm font-semibold rounded-lg hover:bg-brand-600 transition-colors">
-          + Novo Imóvel
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setImportModal(true)}
+            className="px-4 py-2 text-sm font-semibold text-brand-600 border border-brand-200 bg-brand-50 rounded-lg hover:bg-brand-100 transition-colors"
+          >
+            📥 Importar do Drive
+          </button>
+          <Link href="/admin/imoveis/novo" className="px-4 py-2 bg-brand-500 text-white text-sm font-semibold rounded-lg hover:bg-brand-600 transition-colors">
+            + Novo Imóvel
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-neutral-200 mb-4 p-3 flex flex-wrap gap-3">
@@ -186,6 +196,16 @@ export default function AdminImoveisPage() {
           </div>
         )}
       </div>
+
+      {importModal && (
+        <NovaImportacaoModal
+          onClose={() => setImportModal(false)}
+          onCreated={() => {
+            setImportModal(false)
+            window.location.href = '/admin/importacoes'
+          }}
+        />
+      )}
     </div>
   )
 }

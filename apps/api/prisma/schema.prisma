@@ -1,10 +1,14 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Connection pooler do Supabase (pgbouncer) — usada em runtime pelas funções serverless
+  url       = env("DATABASE_URL")
+  // Conexão direta (sem pooler) — necessária para migrations
+  directUrl = env("DIRECT_URL")
 }
 
 enum TipoImovel {

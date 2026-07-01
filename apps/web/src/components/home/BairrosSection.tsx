@@ -5,10 +5,14 @@ import type { BairroListItem } from '@imov/types'
 const API = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
 async function getBairros(): Promise<BairroListItem[]> {
-  const res = await fetch(`${API}/bairros?limit=8`, { next: { revalidate: 300 } })
-  if (!res.ok) return []
-  const json = await res.json()
-  return json.data ?? []
+  try {
+    const res = await fetch(`${API}/bairros?limit=8`, { next: { revalidate: 300 } })
+    if (!res.ok) return []
+    const json = await res.json()
+    return json.data ?? []
+  } catch {
+    return []
+  }
 }
 
 export async function BairrosSection() {

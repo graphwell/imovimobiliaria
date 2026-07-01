@@ -39,3 +39,7 @@ prisma/migrations/dev.db
 
 # Google service account credentials (nunca commitar)
 apps/api/secrets/
+
+# Rascunhos locais de env vars para colar em painéis (Vercel etc.) — nunca commitar
+vercel-env.txt
+**/vercel-env.txt

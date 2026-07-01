@@ -1,6 +1,4 @@
 import { google } from 'googleapis'
-import { existsSync } from 'fs'
-import { join } from 'path'
 
 const SPREADSHEET_TITLE = 'IMOV — Leads'
 const SCOPES = [
@@ -14,18 +12,35 @@ const HEADERS = [
   'Score', 'Status CRM', 'UTM Source',
 ]
 
-function credentialsPath(): string {
-  return process.env['GOOGLE_APPLICATION_CREDENTIALS']
-    ?? join(process.cwd(), 'secrets', 'google-service-account.json')
+interface GoogleServiceAccountCredentials {
+  client_email: string
+  private_key: string
+  [key: string]: unknown
+}
+
+// Em ambiente serverless (Vercel) não há disco persistente para apontar
+// GOOGLE_APPLICATION_CREDENTIALS para um arquivo — as credenciais da conta de
+// serviço viajam como JSON inteiro em uma variável de ambiente.
+function getCredentials(): GoogleServiceAccountCredentials | null {
+  const raw = process.env['GOOGLE_SERVICE_ACCOUNT_JSON']
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as GoogleServiceAccountCredentials
+  } catch {
+    console.error('[Sheets] GOOGLE_SERVICE_ACCOUNT_JSON inválido (JSON malformado)')
+    return null
+  }
 }
 
 function isEnabled(): boolean {
-  return existsSync(credentialsPath())
+  return getCredentials() !== null
 }
 
 function getAuth() {
+  const credentials = getCredentials()
+  if (!credentials) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON não configurado')
   return new google.auth.GoogleAuth({
-    keyFilename: credentialsPath(),
+    credentials,
     scopes: SCOPES,
   })
 }
@@ -134,7 +149,7 @@ export async function getLastRows(count = 5): Promise<string[][]> {
 }
 
 export async function testConnection(): Promise<{ ok: boolean; spreadsheetId?: string; url?: string; error?: string }> {
-  if (!isEnabled()) return { ok: false, error: 'Credenciais não encontradas em secrets/google-service-account.json' }
+  if (!isEnabled()) return { ok: false, error: 'GOOGLE_SERVICE_ACCOUNT_JSON não configurado' }
   try {
     const spreadsheetId = await getOrCreateSpreadsheetId()
     const auth = getAuth()

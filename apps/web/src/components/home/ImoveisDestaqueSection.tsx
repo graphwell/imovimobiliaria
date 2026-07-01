@@ -5,16 +5,20 @@ import type { ImovelListItem } from '@imov/types'
 const API = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 
 async function getImoveisDestaque(): Promise<ImovelListItem[]> {
-  const res = await fetch(`${API}/imoveis?destaque=true&limit=6`, {
-    next: { revalidate: 120 },
-  })
-  if (!res.ok) return []
-  const json = await res.json()
-  return (json.data ?? []).map((i: ImovelListItem) => ({
-    ...i,
-    preco: Number(i.preco),
-    areaTotal: Number(i.areaTotal),
-  }))
+  try {
+    const res = await fetch(`${API}/imoveis?destaque=true&limit=6`, {
+      next: { revalidate: 120 },
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.data ?? []).map((i: ImovelListItem) => ({
+      ...i,
+      preco: Number(i.preco),
+      areaTotal: Number(i.areaTotal),
+    }))
+  } catch {
+    return []
+  }
 }
 
 export async function ImoveisDestaqueSection() {

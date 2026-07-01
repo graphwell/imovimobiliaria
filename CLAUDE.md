@@ -59,13 +59,16 @@ Monorepo Turborepo + pnpm workspaces.
 - `Button`, `Input`, `Textarea`, `Skeleton`, `CardImovelSkeleton`
 - Utilitários: `cn()`, `formatCurrency()`, `formatArea()`
 
-**Infraestrutura**
-- VPS Ubuntu 24.04 com API rodando via PM2
-- PostgreSQL + Redis instalados no host do VPS
-- Nginx Proxy Manager (Docker) gerenciando SSL e reverse proxy
-- Domínio `api.somar.ia.br` → VPS com SSL Let's Encrypt
-- Domínio `imov.somar.ia.br` → Vercel com SSL automático
-- Deploy automático: push no `main` → Vercel builda e deploya
+**Infraestrutura — migrada para 100% gratuita (VPS desativada em 2026-06-30)**
+- API Fastify rodando como função serverless na Vercel (`apps/api/api/index.ts` envolve o app Fastify existente — rotas, plugins de auth/cors/multipart/rate-limit não mudaram)
+- Banco: Supabase Postgres (`DATABASE_URL` com pooler para runtime, `DIRECT_URL` sem pooler para migrations)
+- Storage de fotos: Supabase Storage (já era usado antes da migração, sem mudança)
+- Cron jobs (sync Google Meu Negócio, submit sitemap): Vercel Cron Jobs chamando rotas HTTP em `/api/cron/*` (substituem o `node-cron` que dependia de processo de longa duração)
+- Domínio `imov.somar.ia.br` → Vercel (frontend)
+- Domínio `api.somar.ia.br` → apontar para o novo projeto Vercel da API (reconfigurar DNS — antes apontava pra VPS)
+- Deploy automático: push no `main` → Vercel builda e deploya (frontend e API, dois projetos Vercel separados com Root Directory `apps/web` e `apps/api`)
+- **Redis não é mais cogitado**: nunca foi de fato usado no código (era só infra provisionada), removido do `.env.example` e do `docker-compose.yml`
+- **Pipeline de importação de mídia (Google Drive) descontinuado**: rodava em um serviço externo (`pipeline-api.somar.ia.br`) que vivia na VPS perdida, fora deste repo. A tela `/admin/importacoes` foi desativada — ver TODO em `apps/web/src/lib/pipeline-api.ts`
 
 ---
 
@@ -108,101 +111,58 @@ Monorepo Turborepo + pnpm workspaces.
 
 ## Infraestrutura
 
-### VPS
-- **IP:** `147.79.86.65`
-- **OS:** Ubuntu 24.04.4 LTS
-- **Acesso:** Termius ou qualquer cliente SSH
-  ```bash
-  ssh root@147.79.86.65
-  # senha: [guardada no Termius]
-  ```
+### ⚠️ VPS desativada (histórico — não usar mais)
+O projeto rodava num VPS Ubuntu (`147.79.86.65`) com API via PM2, Postgres e Redis no host, e Nginx Proxy Manager (Docker) como reverse proxy. **Não temos mais acesso a essa VPS** — qualquer dado ou processo que só existia lá (banco antigo, `n8n`, `Evolution API`) foi perdido e não deve ser referenciado em deploys novos. As seções abaixo descrevem a infraestrutura atual.
 
-### Serviços no VPS
-| Serviço | Onde roda | Porta | Gerenciador |
+### Vercel (Frontend + API)
+Dois projetos Vercel separados a partir do mesmo monorepo:
+
+| Projeto | Root Directory | Config | Domínio |
 |---|---|---|---|
-| API Fastify | Host (PM2) | 3001 | PM2 |
-| PostgreSQL | Host | 5432 | systemd |
-| Redis | Host | 6379 | systemd |
-| Nginx Proxy Manager | Docker | 80, 443, 81 | Docker |
-| n8n | Docker | 5678 | Docker |
-| Evolution API | Docker | 8080 | Docker |
+| Frontend (`@imov/web`) | `apps/web` | `apps/web/vercel.json` | `imov.somar.ia.br` |
+| API (`@imov/api`) | `apps/api` | `apps/api/vercel.json` | `api.somar.ia.br` (reapontar DNS — antes ia pra VPS) |
 
-### Domínios
-| Domínio | Aponta para | Uso |
-|---|---|---|
-| `imov.somar.ia.br` | Vercel (CNAME) | Frontend |
-| `api.somar.ia.br` | VPS (A record) | API |
+A API roda como função serverless: `apps/api/api/index.ts` embrulha o app Fastify existente (`buildApp()` de `src/app.ts`) e injeta a request/response da Vercel direto no servidor HTTP interno do Fastify — as rotas, plugins (cors/jwt/multipart/rate-limit) e lógica de negócio não mudaram. O `vercel.json` da API tem um `rewrite` (`/(.*) → /api`) pra manter as rotas sem prefixo `/api` (ex: `/imoveis`, `/admin/...`) funcionando como antes, e a seção `crons` aciona `/api/cron/gbp-sync` (diário) e `/api/cron/sitemap-submit` (semanal).
 
-### Banco de dados de produção
-- **Host:** `localhost:5432`
-- **Database:** `imov_db`
-- **User:** `imov`
-- **Senha:** guardada em `/root/imovimobiliaria/apps/api/.env`
+**Cuidados conhecidos da API serverless:**
+- Plano Hobby da Vercel: Cron Jobs só rodam 1x/dia, sem garantia de minuto exato dentro da hora configurada. Aceitável pros 2 jobs atuais (ambos diários/semanais); não usar Vercel Cron pra algo que precise rodar mais de 1x/dia ou em horário exato — nesse caso, usar um gatilho externo gratuito (ex: cron-job.org) batendo nas mesmas rotas com o header `Authorization: Bearer $CRON_SECRET`.
+- `@fastify/rate-limit` usa contador em memória — em serverless cada instância "fria" tem seu próprio contador, então o rate limit não é perfeitamente global entre instâncias (mas continua funcionando, só menos preciso).
 
-### Admin do Nginx Proxy Manager
-- URL: `http://147.79.86.65:81`
-- Gerencia SSL e reverse proxy para `api.somar.ia.br → localhost:3001`
+### Supabase (Banco + Storage)
+- **Banco de dados:** Postgres gerenciado pelo Supabase. `DATABASE_URL` (com pooler/pgbouncer) para runtime, `DIRECT_URL` (sem pooler) só para `prisma migrate`/`db push`.
+- **Storage:** bucket `imoveis` já era usado antes da migração (upload de fotos via `SUPABASE_URL`/`SUPABASE_SERVICE_KEY`), sem mudança.
 
 ---
 
 ## Comandos para retomar o projeto
 
-### No VPS (via Termius)
+### ⚠️ Seção antiga (VPS via Termius/PM2) — não usar mais
+Os comandos `ssh root@147.79.86.65`, `pm2 status/restart/logs`, `psql -U imov -d imov_db` direto no host etc. eram para a VPS desativada. Não há mais acesso a ela. Para inspecionar o banco hoje, use o Supabase Studio (SQL editor) do projeto ou `pnpm --filter @imov/api exec prisma studio` apontando pro `DATABASE_URL` do Supabase.
+
+### Deploy do frontend e da API (Vercel)
 
 ```bash
-# Ver status da API
-pm2 status
-
-# Logs em tempo real
-pm2 logs imov-api
-
-# Logs de erros apenas
-pm2 logs imov-api --err
-
-# Reiniciar API após mudanças
-pm2 restart imov-api
-
-# Atualizar código do VPS após push
-cd /root/imovimobiliaria && git pull origin main
-
-# Rebuild e restart da API
-cd /root/imovimobiliaria && pnpm --filter @imov/api build && pm2 restart imov-api
-
-# Ver .env da API
-cat /root/imovimobiliaria/apps/api/.env
-
-# Abrir banco de dados (prompt psql)
-psql -U imov -d imov_db
-
-# Rodar seeds novamente (cuidado em produção)
-cd /root/imovimobiliaria && pnpm --filter @imov/api exec prisma db seed
-
-# Aplicar mudanças de schema (sem arquivos de migration — usa db push)
-cd /root/imovimobiliaria && pnpm --filter @imov/api exec prisma db push
-```
-
-### Deploy do frontend
-
-```bash
-# Basta fazer push no main — Vercel deploya automaticamente
+# Basta fazer push no main — a Vercel builda e deploya os dois projetos
+# (frontend com Root Directory apps/web, API com Root Directory apps/api)
 git push origin main
 
 # Forçar redeploy sem mudança de código
 git commit --allow-empty -m "chore: trigger redeploy" && git push
 ```
 
-### Deploy da API (após mudanças no código)
+### Banco de dados (Supabase)
 
 ```bash
-# Local: push para o GitHub
-git push origin main
+# Aplicar o schema atual no banco do Supabase (sem migration files — usa db push)
+pnpm --filter @imov/api exec prisma db push
 
-# No VPS: pull + build + restart
-cd /root/imovimobiliaria
-git pull origin main
-pnpm --filter @imov/api build
-pm2 restart imov-api
+# Rodar o seed (cria cidades, bairros, 15 imóveis placeholder e o usuário admin)
+pnpm --filter @imov/api exec prisma db seed
+
+# Abrir Prisma Studio (UI do banco) apontando pro Supabase
+pnpm --filter @imov/api exec prisma studio
 ```
+Esses comandos leem `DATABASE_URL`/`DIRECT_URL` de `apps/api/.env` — preencha com a connection string real do Supabase (Settings → Database) antes de rodar. Nunca commitar esse `.env` (já está no `.gitignore`).
 
 ### Rodar localmente
 
@@ -210,12 +170,13 @@ pm2 restart imov-api
 # 1. Instalar dependências
 pnpm install
 
-# 2. Subir banco + redis (Docker Desktop precisa estar aberto)
+# 2. Banco local: ou sobe um Postgres via Docker (Docker Desktop precisa estar aberto)...
 cd infra && docker compose up -d
+# ...ou aponte DATABASE_URL/DIRECT_URL direto para o Supabase do projeto (mais simples)
 
 # 3. Copiar e configurar .env
 cp apps/api/.env.example apps/api/.env
-# edite apps/api/.env com suas variáveis
+# edite apps/api/.env com suas variáveis (DATABASE_URL, DIRECT_URL, CRON_SECRET etc.)
 
 # 4. Rodar migrations + seed
 pnpm --filter @imov/api exec prisma migrate dev
@@ -253,10 +214,11 @@ imov-imobiliaria/
 │   │       ├── components/   # Header, admin/ImovelForm
 │   │       ├── hooks/        # useLeadBehavior
 │   │       └── lib/          # api.ts, admin-api.ts, gtm.ts
-│   └── api/          # Fastify REST API (VPS/PM2)
-│       ├── prisma/           # schema.prisma + seed.ts + migrations/
+│   └── api/          # Fastify REST API (Vercel serverless)
+│       ├── api/index.ts       # entrypoint serverless (embrulha o Fastify)
+│       ├── prisma/            # schema.prisma + seed.ts (sem migrations/, usa db push)
 │       └── src/
-│           ├── routes/       # handlers HTTP
+│           ├── routes/       # handlers HTTP (inclui cron.ts — jobs via Vercel Cron)
 │           │   └── admin/    # rotas protegidas por JWT
 │           ├── services/     # rankingService, leadScoringService
 │           ├── schemas/      # validação Zod
@@ -266,7 +228,7 @@ imov-imobiliaria/
 │   ├── types/        # Tipos TypeScript globais (@imov/types)
 │   └── config/       # Configs base (Tailwind, ESLint, TSConfig)
 └── infra/
-    └── docker-compose.yml  # PostgreSQL 15 + Redis 7 (dev local)
+    └── docker-compose.yml  # PostgreSQL 15 (dev local opcional — Redis removido, não era usado)
 ```
 
 ---
@@ -279,8 +241,7 @@ imov-imobiliaria/
 | React | 18.3.x | UI |
 | Fastify | 4.28.x | API REST |
 | Prisma | 5.22.x | ORM + migrations |
-| PostgreSQL | 15/16 | Banco de dados |
-| Redis | 7 | Cache (instalado, não usado ainda no código) |
+| PostgreSQL | 15/16 | Banco de dados (Supabase em produção) |
 | Node.js | 20.x | Runtime |
 | pnpm | 9.15.9 | Package manager |
 | Turborepo | 2.x | Monorepo build |
@@ -292,16 +253,17 @@ imov-imobiliaria/
 
 ## Variáveis de ambiente
 
-### API (`apps/api/.env`) — variáveis base
+### API (`apps/api/.env` local / env vars do projeto Vercel da API em produção) — variáveis base
 | Variável | Exemplo | Descrição |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://imov:senha@localhost:5432/imov_db` | PostgreSQL |
-| `REDIS_URL` | `redis://localhost:6379` | Redis |
+| `DATABASE_URL` | `postgresql://postgres.xxx:senha@aws-0-xx.pooler.supabase.com:6543/postgres?pgbouncer=true` | Supabase Postgres, com pooler (runtime) |
+| `DIRECT_URL` | `postgresql://postgres.xxx:senha@aws-0-xx.pooler.supabase.com:5432/postgres` | Supabase Postgres, sem pooler (só migrations/`db push`) |
 | `JWT_SECRET` | string aleatória longa | Assinar tokens JWT |
 | `CORS_ORIGIN` | `https://imov.somar.ia.br,https://imovimobiliaria.vercel.app` | Origens permitidas (comma-separated) |
-| `PORT` | `3001` | Porta da API |
-| `HOST` | `0.0.0.0` | Interface de escuta |
+| `PORT` | `3001` | Porta da API (só usado localmente — Vercel não usa) |
+| `HOST` | `0.0.0.0` | Interface de escuta (só usado localmente) |
 | `NODE_ENV` | `production` | Ambiente |
+| `CRON_SECRET` | string aleatória longa | Autentica chamadas a `/api/cron/*` (Vercel injeta automaticamente como `Authorization: Bearer $CRON_SECRET` nos próprios Cron Jobs) |
 
 ### API — integrações Google
 | Variável | Como obter | Descrição |
@@ -310,7 +272,8 @@ imov-imobiliaria/
 | `GOOGLE_CLIENT_ID` | Google Cloud → APIs & Services → Credentials → OAuth 2.0 Client | Client ID para OAuth |
 | `GOOGLE_CLIENT_SECRET` | Mesmo lugar do Client ID | Client Secret (regenerar se exposto) |
 | `GOOGLE_REDIRECT_URI` | `https://api.somar.ia.br/google/callback` | URI de redirecionamento OAuth (cadastrar no Google Cloud) |
-| `GOOGLE_SHEETS_ID` | Gerado automaticamente nos logs do PM2 na 1ª execução | ID da planilha "IMOV — Leads" |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Ver seção "Conta de serviço Google" abaixo | JSON inteiro da conta de serviço, em uma linha (substitui o antigo arquivo em disco) |
+| `GOOGLE_SHEETS_ID` | Gerado automaticamente nos logs da função na 1ª execução | ID da planilha "IMOV — Leads" |
 | `SMTP_HOST` | `smtp.gmail.com` | Servidor SMTP |
 | `SMTP_PORT` | `587` | Porta SMTP (587 = TLS, 465 = SSL) |
 | `SMTP_USER` | `imovimobiliariace@gmail.com` | Email remetente |
@@ -318,11 +281,12 @@ imov-imobiliaria/
 | `GA4_MEASUREMENT_ID` | GA4 → Admin → Streams de dados → ID de medição | Ex: `G-XXXXXXXXXX` |
 | `GA4_API_SECRET` | GA4 → Admin → Streams → Measurement Protocol API secrets → Criar | Segredo para Measurement Protocol |
 
-### API — arquivo de credenciais (nunca versionar)
-- Caminho no VPS: `/root/imovimobiliaria/apps/api/secrets/google-service-account.json`
+### API — conta de serviço Google (nunca versionar)
 - Conta de serviço: `imov-automation@imobiliaria-496802.iam.gserviceaccount.com`
 - Projeto GCP: `imobiliaria-496802`
-- Para enviar ao VPS: `scp google-service-account.json root@147.79.86.65:/root/imovimobiliaria/apps/api/secrets/`
+- Antes (VPS): o JSON ficava em `apps/api/secrets/google-service-account.json` no disco e era lido via `GOOGLE_APPLICATION_CREDENTIALS`. **Isso não funciona em serverless** (sem disco persistente).
+- Agora: copie o conteúdo inteiro do arquivo `.json` da conta de serviço, cole como uma única linha (sem quebras) na env var `GOOGLE_SERVICE_ACCOUNT_JSON` no painel da Vercel (projeto da API). O código faz `JSON.parse` dela em `apps/api/src/services/googleSheetsService.ts`.
+- Se precisar gerar uma chave nova: Google Cloud Console → IAM & Admin → Service Accounts → essa conta → Keys → Add Key → JSON.
 
 ### Web (`apps/web` — configurar no Vercel)
 | Variável | Valor em produção | Descrição |
@@ -337,17 +301,10 @@ imov-imobiliaria/
 
 ## Integrações Google — setup completo
 
-### Credenciais no VPS (1 vez)
+### Credenciais no painel da Vercel (1 vez)
 
-**1. Copiar o arquivo de conta de serviço**
-O arquivo `google-service-account.json` está no seu computador local em `apps/api/secrets/` mas é ignorado pelo git. Para enviá-lo ao VPS:
-```bash
-# No seu computador local (PowerShell ou terminal):
-scp C:\SOMAR\imov_imobiliaria\apps\api\secrets\google-service-account.json root@147.79.86.65:/root/imovimobiliaria/apps/api/secrets/
-
-# No VPS, confirmar:
-ls /root/imovimobiliaria/apps/api/secrets/
-```
+**1. Configurar a conta de serviço como env var**
+O arquivo `google-service-account.json` (local, em `apps/api/secrets/`, ignorado pelo git) não pode mais ser lido do disco — a API roda em função serverless. Abra o arquivo, copie o JSON inteiro em uma única linha, e cole no painel da Vercel (projeto da API → Settings → Environment Variables) na variável `GOOGLE_SERVICE_ACCOUNT_JSON`.
 
 **2. Senha de App do Gmail (para SMTP_PASS)**
 1. Acesse [myaccount.google.com/security](https://myaccount.google.com/security) com `imovimobiliariace@gmail.com`
@@ -368,13 +325,8 @@ ls /root/imovimobiliaria/apps/api/secrets/
 - No VPS: adicione `GOOGLE_CLIENT_ID=xxx` e `GOOGLE_CLIENT_SECRET=xxx` no `.env`
 - Acesse `/admin/integracoes` → clique "Conectar com Google" → autorize com `imovimobiliariace@gmail.com`
 
-**5. Reiniciar após configurar todas as variáveis**
-```bash
-pm2 restart imov-api
-pm2 logs imov-api --lines 20
-# Verificar se aparece: "[Cron] Agendamentos ativos"
-# Verificar se aparece: "GOOGLE_SHEETS_ID=1abc..." (só na 1ª execução sem o ID)
-```
+**5. Reaplicar deploy após configurar todas as variáveis**
+Env vars novas/alteradas na Vercel só valem a partir do próximo deploy. No painel do projeto da API: Deployments → ⋯ → Redeploy (ou faça um commit vazio e dê push). Confira os logs da função (Vercel → projeto → Logs) e da execução do Cron Job (Vercel → projeto → Cron Jobs) para validar que `/api/cron/gbp-sync` e `/api/cron/sitemap-submit` estão rodando, e que `GOOGLE_SHEETS_ID` foi gerado na 1ª execução (apareceria no log da função, não mais em `pm2 logs`).
 
 ---
 
@@ -383,8 +335,8 @@ pm2 logs imov-api --lines 20
 **Monorepo Turborepo + pnpm workspaces**
 Permite compartilhar tipos e componentes entre API e frontend sem duplicação. Turborepo faz build paralelo e cacheia resultados — builds são muito mais rápidos.
 
-**Fastify no VPS, não no Vercel**
-Fastify é um servidor Node.js de longa duração — precisa estar sempre ativo para manter conexão com PostgreSQL e Redis. Vercel é serverless (mata o processo após cada request), incompatível com Fastify diretamente. VPS garante controle total e custos previsíveis.
+**Fastify como função serverless na Vercel (migrado de VPS/PM2 em 2026-06-30)**
+A VPS foi desativada (perda de acesso) e o projeto migrou para infraestrutura 100% gratuita. Em vez de reescrever cada rota como function handler individual, `apps/api/api/index.ts` embrulha o app Fastify inteiro (`buildApp()`) e injeta a request/response da Vercel no servidor HTTP interno do Fastify — preserva todas as rotas, plugins (cors/jwt/multipart/rate-limit) e lógica de negócio sem reescrita. Trade-offs aceitos: cold start inclui o boot do Fastify; `node-cron` (que dependia de processo sempre ativo) virou rotas HTTP em `/api/cron/*` disparadas por Vercel Cron Jobs; `@fastify/rate-limit` em memória não é mais global entre instâncias serverless (aceitável, não é crítico pro volume atual).
 
 **JWT em Bearer token para o admin cross-domain**
 O admin frontend fica em `imov.somar.ia.br` e a API em `api.somar.ia.br`. Cookies httpOnly com `sameSite: lax` não são enviados em requests cross-site fetch/XHR. Solução: login retorna o token no body, admin guarda em localStorage e envia como `Authorization: Bearer`.
@@ -453,7 +405,7 @@ O Vercel lê o `package.json` da Root Directory para detectar a versão do Next.
 - `generateMetadata()` nas páginas que ainda não têm
 
 ### 10. Melhorias de performance
-- Ativar cache Redis nas rotas mais acessadas (`/imoveis`, `/bairros`)
+- Cache: Redis foi removido do stack (nunca chegou a ser usado em código). Se cache server-side for necessário no futuro, considerar `@vercel/kv` (Redis gerenciado, free tier) ou cache HTTP/ISR antes de reintroduzir um Redis dedicado
 - `next/image` nas fotos de imóveis (substituir `<img>`)
 - ISR (Incremental Static Regeneration) nas páginas de detalhe
 

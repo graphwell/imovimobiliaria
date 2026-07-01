@@ -9,6 +9,9 @@ import { getToken, clearToken, adminApi } from '../../lib/admin-api'
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
   { href: '/admin/imoveis', label: 'Imóveis', icon: '🏠' },
+  // TODO: "Importações" (pipeline Google Drive) descontinuada — dependia de
+  // serviço externo perdido com a VPS. Reativar o link aqui só depois de
+  // reimplementar o pipeline (ver lib/pipeline-api.ts).
   { href: '/admin/leads', label: 'Leads', icon: '👥' },
   { href: '/admin/integracoes', label: 'Integrações', icon: '🔗' },
 ]

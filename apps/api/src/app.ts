@@ -74,6 +74,7 @@ export async function buildApp() {
   await app.register(import('./routes/admin/index.js'), { prefix: '/admin' })
   await app.register(import('./routes/stats.js'), { prefix: '/stats' })
   await app.register(import('./routes/mercado.js'), { prefix: '/mercado' })
+  await app.register(import('./routes/cron.js'), { prefix: '/api/cron' })
 
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
 

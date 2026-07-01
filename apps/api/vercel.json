@@ -1,0 +1,12 @@
+{
+  "framework": null,
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@imov/api...",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
+  ],
+  "crons": [
+    { "path": "/api/cron/gbp-sync", "schedule": "0 12 * * *" },
+    { "path": "/api/cron/sitemap-submit", "schedule": "0 11 * * 1" }
+  ]
+}
