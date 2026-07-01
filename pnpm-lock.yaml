@@ -59,6 +59,12 @@ importers:
       pino:
         specifier: ^9.5.0
         version: 9.14.0
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -78,15 +84,9 @@ importers:
       '@vercel/node':
         specifier: ^3.2.29
         version: 3.2.29
-      prisma:
-        specifier: ^5.22.0
-        version: 5.22.0
       tsx:
         specifier: ^4.19.2
         version: 4.22.0
-      typescript:
-        specifier: ^5.6.3
-        version: 5.9.3
 
   apps/web:
     dependencies:
